@@ -26,6 +26,9 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "experiments": {
+      "baseUrl": "/BrickCollect"
+    },
     "extra": {
       "rebrickableApiKey": "YOUR_REBRICKABLE_API_KEY"
     },
