@@ -1,6 +1,5 @@
-import React, { useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import React, { useCallback, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { Colors } from '../../constants/colors';
 import { FontSize, Radius, Spacing } from '../../constants/theme';
 
@@ -11,19 +10,19 @@ interface Props {
 }
 
 function AnimatedButton({ onPress, disabled, children }: { onPress: () => void; disabled?: boolean; children: React.ReactNode }) {
-  const scale = useSharedValue(1);
-  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const scale = useRef(new Animated.Value(1)).current;
 
   const handlePress = useCallback(() => {
-    scale.value = withSpring(0.85, { damping: 10, stiffness: 300 }, () => {
-      scale.value = withSpring(1, { damping: 10, stiffness: 300 });
-    });
+    Animated.sequence([
+      Animated.spring(scale, { toValue: 0.82, useNativeDriver: true, speed: 50, bounciness: 0 }),
+      Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 8 }),
+    ]).start();
     onPress();
   }, [onPress, scale]);
 
   return (
     <TouchableOpacity onPress={handlePress} disabled={disabled} activeOpacity={1}>
-      <Animated.View style={[styles.btn, disabled && styles.btnDisabled, animStyle]}>
+      <Animated.View style={[styles.btn, disabled && styles.btnDisabled, { transform: [{ scale }] }]}>
         {children}
       </Animated.View>
     </TouchableOpacity>
