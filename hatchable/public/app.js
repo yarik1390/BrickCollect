@@ -298,11 +298,11 @@ async function renderPortfolio() {
     <div class="page">
       ${topBar()}
       <div class="eyebrow mb-8">Collection</div>
-      <h1 class="h-display mb-24">Portfolio</h1>
+      <h1 class="h-display mb-16">Portfolio</h1>
       <div class="hero">
         <div class="hero-label">Total collection value</div>
         <div class="skel line" style="height:54px;width:60%;margin:10px 0 14px"></div>
-        <div class="skel" style="height:120px;border-radius:6px"></div>
+        <div class="skel" style="height:80px;border-radius:6px"></div>
       </div>
       <div class="filter-row">
         <span class="chip active">Loading…</span>
@@ -349,7 +349,7 @@ function paintPortfolio() {
     <div class="page">
       ${topBar()}
       <div class="eyebrow mb-8">Collection</div>
-      <h1 class="h-display mb-24">Portfolio</h1>
+      <h1 class="h-display mb-16">Portfolio</h1>
 
       <div class="hero">
         <div class="hero-label">Total collection value</div>
@@ -407,7 +407,7 @@ function paintPortfolio() {
 
   if (!isEmpty) {
     renderChart($("#heroChart"), points, {
-      w: 360, h: 120, dot: true,
+      w: 360, h: 80, dot: true,
       scrubLabelFor: (v) => fmtMoneyShort(v),
     });
   }
@@ -1230,8 +1230,8 @@ window.bv = { openScan, closeScan, capturePhoto };
     setTimeout(showInstallBanner, 2000);
   });
 
-  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
-  if (isIOS) setTimeout(showInstallBanner, 2500);
+  const isMobile = /iphone|ipad|ipod|android/i.test(navigator.userAgent);
+  if (isMobile && !state.pwa.deferredPrompt) setTimeout(showInstallBanner, 2500);
 })();
 
 function showInstallBanner() {
@@ -1261,7 +1261,7 @@ function showInstallBanner() {
 
 async function handleInstall() {
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
-  if (isIOS) { showIOSSheet(); return; }
+  if (isIOS || !state.pwa.deferredPrompt) { showIOSSheet(); return; }
   if (state.pwa.deferredPrompt) {
     state.pwa.deferredPrompt.prompt();
     const { outcome } = await state.pwa.deferredPrompt.userChoice;
@@ -1272,6 +1272,10 @@ async function handleInstall() {
 
 function showIOSSheet() {
   if ($("#iosInstallSheet")) return;
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+  const instructions = isIOS
+    ? `Tap <span class="ios-share-icon">${I.share}</span> in the Safari toolbar, then tap <strong>"Add to Home Screen"</strong> to install Brickvault as an app.`
+    : `Tap the browser menu <strong>⋮</strong> then tap <strong>"Add to Home Screen"</strong> or <strong>"Install app"</strong>.`;
   const sheet = document.createElement("div");
   sheet.id = "iosInstallSheet";
   sheet.className = "ios-sheet";
@@ -1279,7 +1283,7 @@ function showIOSSheet() {
     <div class="ios-sheet-inner">
       <div class="ios-sheet-handle"></div>
       <h3>Add to Home Screen</h3>
-      <p>Tap <span class="ios-share-icon">${I.share}</span> in the Safari toolbar, then tap <strong>"Add to Home Screen"</strong> to install Brickvault as an app.</p>
+      <p>${instructions}</p>
       <button class="primary-btn" id="closeIOSSheet" style="width:100%">Got it</button>
     </div>
   `;

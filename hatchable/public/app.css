@@ -120,7 +120,7 @@ img { display: block; max-width: 100%; }
 }
 
 .page {
-  padding: 32px 22px 0;
+  padding: 20px 22px 0;
   animation: pageIn .42s var(--ease) both;
 }
 .page.no-pad-top { padding-top: 0; }
@@ -164,7 +164,7 @@ img { display: block; max-width: 100%; }
 .h-display {
   font-family: var(--serif);
   font-weight: 400;
-  font-size: 42px;
+  font-size: 34px;
   line-height: 0.96;
   letter-spacing: -0.028em;
   color: var(--ink);
@@ -195,7 +195,7 @@ img { display: block; max-width: 100%; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 28px;
+  margin-bottom: 14px;
 }
 .brand {
   display: flex;
@@ -229,14 +229,14 @@ img { display: block; max-width: 100%; }
 }
 
 .icon-btn {
-  width: 38px; height: 38px;
+  width: 44px; height: 44px;
   border-radius: var(--r-full);
   display: inline-flex;
   align-items: center; justify-content: center;
   color: var(--ink-soft);
 }
 .icon-btn:hover { background: var(--surface-2); color: var(--ink); }
-.icon-btn svg { width: 17px; height: 17px; }
+.icon-btn svg { width: 18px; height: 18px; }
 .icon-row { display: flex; gap: 4px; }
 
 /* ============================================================
@@ -246,10 +246,10 @@ img { display: block; max-width: 100%; }
   position: relative;
   background: var(--surface);
   border-radius: var(--r-3);
-  padding: 26px 24px 20px;
+  padding: 18px 20px 14px;
   box-shadow: var(--shadow-3);
   overflow: hidden;
-  margin-bottom: 24px;
+  margin-bottom: 14px;
 }
 .hero::after {
   content: "";
@@ -321,7 +321,7 @@ img { display: block; max-width: 100%; }
 .hero-chart {
   margin-top: 20px;
   position: relative;
-  height: 120px;
+  height: 80px;
 }
 .hero-chart svg { width: 100%; height: 100%; display: block; }
 
@@ -361,15 +361,15 @@ img { display: block; max-width: 100%; }
   background: var(--surface-2);
   border-radius: var(--r-full);
   padding: 3px;
-  margin-top: 14px;
+  margin-top: 8px;
 }
 .range-pill {
   flex: 1;
-  padding: 7px 0;
+  padding: 9px 0;
   border-radius: var(--r-full);
   text-align: center;
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 600;
   letter-spacing: 0.06em;
   color: var(--ink-mute);
@@ -388,7 +388,7 @@ img { display: block; max-width: 100%; }
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 18px;
+  margin-bottom: 10px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
@@ -398,7 +398,7 @@ img { display: block; max-width: 100%; }
 
 .chip {
   flex-shrink: 0;
-  padding: 9px 14px;
+  padding: 11px 16px;
   border-radius: var(--r-full);
   font-size: 13px;
   font-weight: 500;
@@ -654,7 +654,7 @@ img { display: block; max-width: 100%; }
 .qty-label svg { width: 15px; height: 15px; color: var(--ink-mute); }
 .qty-controls { display: flex; align-items: center; gap: 4px; }
 .qty-btn {
-  width: 32px; height: 32px;
+  width: 40px; height: 40px;
   border-radius: var(--r-full);
   background: var(--surface-2);
   font-family: var(--mono);
@@ -1128,7 +1128,7 @@ img { display: block; max-width: 100%; }
   padding: 8px 4px;
   border-radius: var(--r-full);
   color: var(--ink-mute);
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.02em;
   position: relative;
@@ -1416,7 +1416,8 @@ img { display: block; max-width: 100%; }
   overflow: hidden;
   display: flex;
   align-items: center;
-  height: 80px;
+  min-height: 80px;
+  height: auto;
   cursor: pointer;
   box-shadow: var(--shadow-1);
   text-decoration: none;
@@ -1440,7 +1441,7 @@ img { display: block; max-width: 100%; }
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .sl-meta {
-  font-family: var(--mono); font-size: 9.5px; color: var(--ink-mute);
+  font-family: var(--mono); font-size: 11px; color: var(--ink-mute);
   letter-spacing: 0.04em; text-transform: uppercase; margin-top: 3px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
@@ -1451,7 +1452,7 @@ img { display: block; max-width: 100%; }
 }
 .sl-delta {
   display: inline-flex; align-items: center; gap: 3px;
-  font-family: var(--mono); font-size: 9.5px; font-weight: 600;
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
   padding: 2px 7px; border-radius: var(--r-full); margin-top: 4px; white-space: nowrap;
 }
 .sl-delta.up   { background: var(--up-soft);   color: var(--up); }
