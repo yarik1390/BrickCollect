@@ -1217,6 +1217,11 @@ document.addEventListener("DOMContentLoaded", () => {
 // expose to inline handlers
 window.bv = { openScan, closeScan, capturePhoto };
 
+// Register service worker (required for Chrome Android install prompt)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+
 // =============================================================
 // PWA install prompt
 // =============================================================
