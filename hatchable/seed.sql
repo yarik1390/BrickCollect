@@ -1,0 +1,43 @@
+-- Seed catalog of popular LEGO sets
+-- Data is curated for demo purposes; prices reflect realistic 2024-2025 secondary market ranges.
+
+INSERT INTO lego_sets (set_num, name, theme, subtheme, year, pieces, minifigs, retail_price, current_value, forecast_2y, forecast_5y, image_url, includes_minifigs, retired, description) VALUES
+('71043-1', 'Hogwarts Castle', 'Harry Potter', 'Wizarding World', 2018, 6020, 28, 399.99, 469.99, 491.64, 523.53, 'https://images.brickset.com/sets/large/71043-1.jpg', true, true, 'Microscale castle with the Great Hall, library, classrooms, and the Whomping Willow.'),
+('75192-1', 'Millennium Falcon', 'Star Wars', 'Ultimate Collector Series', 2017, 7541, 8, 799.99, 949.00, 1015.30, 1180.45, 'https://images.brickset.com/sets/large/75192-1.jpg', true, false, 'The largest LEGO Star Wars set ever produced — the UCS Millennium Falcon.'),
+('10256-1', 'Taj Mahal', 'Creator Expert', 'Architecture', 2017, 5923, 0, 369.99, 519.99, 549.20, 612.40, 'https://images.brickset.com/sets/large/10256-1.jpg', false, true, 'A re-issue of the iconic Taj Mahal model with 5923 pieces.'),
+('10294-1', 'Titanic', 'Creator Expert', 'Ships', 2021, 9090, 0, 679.99, 749.99, 798.40, 882.10, 'https://images.brickset.com/sets/large/10294-1.jpg', false, false, 'The legendary RMS Titanic at 1:200 scale, splitting into three sections.'),
+('10276-1', 'Colosseum', 'Creator Expert', 'Architecture', 2020, 9036, 0, 549.99, 619.00, 645.30, 712.55, 'https://images.brickset.com/sets/large/10276-1.jpg', false, false, 'The largest LEGO set by piece count when released — the Roman Colosseum.'),
+('42115-1', 'Lamborghini Sián FKP 37', 'Technic', 'Supercars', 2020, 3696, 0, 379.99, 449.99, 482.30, 540.10, 'https://images.brickset.com/sets/large/42115-1.jpg', false, false, '1:8 scale Lamborghini Sián with working V12 and 8-speed sequential gearbox.'),
+('42083-1', 'Bugatti Chiron', 'Technic', 'Supercars', 2018, 3599, 0, 349.99, 489.00, 528.10, 612.40, 'https://images.brickset.com/sets/large/42083-1.jpg', false, true, '1:8 scale Bugatti Chiron with a movable rear wing and detailed W16 engine.'),
+('42143-1', 'Ferrari Daytona SP3', 'Technic', 'Supercars', 2022, 3778, 0, 449.99, 519.99, 552.80, 615.30, 'https://images.brickset.com/sets/large/42143-1.jpg', false, false, 'Inspired by the legendary Ferrari Daytona SP3 with V12 engine.'),
+('75313-1', 'AT-AT', 'Star Wars', 'Ultimate Collector Series', 2021, 6785, 9, 799.99, 879.99, 925.40, 1023.10, 'https://images.brickset.com/sets/large/75313-1.jpg', true, false, 'The UCS AT-AT walker from The Empire Strikes Back at minifigure scale.'),
+('75252-1', 'Imperial Star Destroyer', 'Star Wars', 'Ultimate Collector Series', 2019, 4784, 2, 699.99, 879.00, 932.20, 1042.80, 'https://images.brickset.com/sets/large/75252-1.jpg', true, true, 'The UCS Imperial Star Destroyer with 4784 pieces and stand.'),
+('21318-1', 'Tree House', 'Ideas', 'Architecture', 2019, 3036, 4, 199.99, 269.00, 285.60, 320.45, 'https://images.brickset.com/sets/large/21318-1.jpg', true, false, 'A tree house with three cabins, made with sustainably sourced plant-based plastic leaves.'),
+('21325-1', 'Medieval Blacksmith', 'Ideas', 'Castle', 2021, 2164, 4, 149.99, 199.99, 215.40, 248.30, 'https://images.brickset.com/sets/large/21325-1.jpg', true, true, 'Detailed medieval blacksmith forge with workshop, living quarters, and a fully equipped knight.'),
+('10242-1', 'MINI Cooper', 'Creator Expert', 'Vehicles', 2014, 1077, 0, 99.99, 219.00, 235.40, 282.10, 'https://images.brickset.com/sets/large/10242-1.jpg', false, true, 'The classic British MINI Cooper Mk VII in racing green.'),
+('10262-1', 'James Bond Aston Martin DB5', 'Creator Expert', 'Vehicles', 2018, 1295, 0, 149.99, 299.99, 322.10, 380.50, 'https://images.brickset.com/sets/large/10262-1.jpg', false, true, 'James Bond''s Aston Martin DB5 with revolving license plates and ejector seat.'),
+('10295-1', 'Porsche 911', 'Creator Expert', 'Vehicles', 2021, 1458, 0, 149.99, 199.99, 215.40, 248.10, 'https://images.brickset.com/sets/large/10295-1.jpg', false, false, 'Build the Porsche 911 Turbo or 911 Targa — your choice with one set.'),
+('76989-1', 'Horizon Forbidden West: Tallneck', 'Icons', 'Gaming', 2022, 1222, 1, 79.99, 95.00, 102.40, 118.20, 'https://images.brickset.com/sets/large/76989-1.jpg', true, false, 'Aloy and the Tallneck from Horizon Forbidden West.'),
+('21333-1', 'Vincent van Gogh – The Starry Night', 'Ideas', 'Art', 2022, 2316, 1, 169.99, 199.99, 215.40, 248.30, 'https://images.brickset.com/sets/large/21333-1.jpg', true, false, 'A LEGO recreation of Van Gogh''s masterpiece, designed to hang on a wall.'),
+('10497-1', 'Galaxy Explorer', 'Icons', 'Space', 2022, 1254, 4, 99.99, 119.99, 128.50, 148.10, 'https://images.brickset.com/sets/large/10497-1.jpg', true, false, '90th-anniversary tribute to Classic Space set 497 — the original Galaxy Explorer.'),
+('10283-1', 'NASA Space Shuttle Discovery', 'Icons', 'Space', 2021, 2354, 0, 199.99, 239.00, 252.40, 285.10, 'https://images.brickset.com/sets/large/10283-1.jpg', false, false, 'Includes the Hubble Space Telescope. A faithful recreation of the Space Shuttle Discovery STS-31 mission.'),
+('92176-1', 'NASA Apollo Saturn V', 'Ideas', 'Space', 2017, 1969, 0, 119.99, 199.99, 211.40, 240.30, 'https://images.brickset.com/sets/large/92176-1.jpg', false, true, '1:110 scale model of the historic Apollo Saturn V launch vehicle.'),
+('21322-1', 'Pirates of Barracuda Bay', 'Ideas', 'Pirates', 2020, 2545, 6, 199.99, 359.00, 380.50, 432.10, 'https://images.brickset.com/sets/large/21322-1.jpg', true, true, 'Shipwreck pirate base built from the wreckage of the Barracuda — based on classic Pirates sets.'),
+('60198-1', 'Cargo Train', 'City', 'Trains', 2018, 1226, 6, 229.99, 289.99, 305.40, 348.10, 'https://images.brickset.com/sets/large/60198-1.jpg', true, false, 'Motorized cargo train with Bluetooth-controlled motor and 10-piece track.'),
+('71741-1', 'NINJAGO City Gardens', 'Ninjago', '10th Anniversary', 2021, 5685, 19, 299.99, 389.99, 412.40, 472.10, 'https://images.brickset.com/sets/large/71741-1.jpg', true, false, 'Three-story NINJAGO building from the 10th-anniversary line with 19 minifigures.'),
+('76391-1', 'Hogwarts Icons – Collectors'' Edition', 'Harry Potter', 'Wizarding World', 2021, 3010, 1, 249.99, 309.00, 326.40, 372.10, 'https://images.brickset.com/sets/large/76391-1.jpg', true, false, 'Display set with Hedwig, wand, glasses, the Sorting Hat and a Golden Snitch.'),
+('75308-1', 'R2-D2', 'Star Wars', 'Ultimate Collector Series', 2021, 2314, 0, 199.99, 269.99, 285.40, 322.10, 'https://images.brickset.com/sets/large/75308-1.jpg', false, false, 'A detailed UCS-style R2-D2 with rotating head, retractable mid-leg, and tool-bearing arms.'),
+('40516-1', 'Everyone Is Awesome', 'Promotional', 'Pride', 2021, 346, 11, 34.99, 49.99, 53.20, 60.40, 'https://images.brickset.com/sets/large/40516-1.jpg', true, false, 'Eleven monochrome minifigures in the colours of the rainbow flag.'),
+('10300-1', 'Back to the Future Time Machine', 'Icons', 'Vehicles', 2022, 1872, 2, 199.99, 239.99, 252.40, 285.10, 'https://images.brickset.com/sets/large/10300-1.jpg', true, false, 'Build the DeLorean from any of the three Back to the Future films.'),
+('76989-1b', 'Mos Eisley Cantina', 'Star Wars', 'Master Builder Series', 2020, 3187, 21, 349.99, 419.99, 442.30, 503.10, 'https://images.brickset.com/sets/large/75290-1.jpg', true, false, 'Master Builder Series detailed Mos Eisley Cantina with 21 minifigures.'),
+('10307-1', 'Eiffel Tower', 'Icons', 'Architecture', 2022, 10001, 0, 629.99, 689.99, 712.40, 783.20, 'https://images.brickset.com/sets/large/10307-1.jpg', false, false, '1.5m tall recreation of the Eiffel Tower — among the largest LEGO sets ever produced.'),
+('42100-1', 'Liebherr R 9800 Excavator', 'Technic', 'Construction', 2019, 4108, 0, 449.99, 549.99, 580.30, 652.10, 'https://images.brickset.com/sets/large/42100-1.jpg', false, true, 'Bluetooth-controlled motorized Liebherr R 9800 excavator with seven motors.')
+ON CONFLICT (set_num) DO NOTHING;
+
+-- A few sample minifigures
+INSERT INTO minifigs (fig_num, name, series, rarity, value, image_url) VALUES
+('col325', 'Mr. Gold', 'Minifigures Series 10', 'legendary', 1450.00, 'https://images.brickset.com/sets/large/col325-1.jpg'),
+('sw0908', 'Boba Fett (Mandalorian)', 'Star Wars', 'rare', 48.00, 'https://images.brickset.com/sets/large/sw0908-1.jpg'),
+('col265', 'Mariachi', 'Minifigures Series 16', 'uncommon', 8.50, 'https://images.brickset.com/sets/large/col265-1.jpg'),
+('njo493', 'Golden Master Wu', 'Ninjago', 'rare', 32.00, 'https://images.brickset.com/sets/large/njo493-1.jpg')
+ON CONFLICT (fig_num) DO NOTHING;

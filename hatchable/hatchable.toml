@@ -1,0 +1,22 @@
+[project]
+name        = "Brickvault"
+description = "A premium LEGO portfolio tracker — catalog from Rebrickable, AI-priced, camera-scannable."
+
+# Claude powers the camera vision (identify a set from a photo) and the
+# price-valuation engine (estimate market value + 2y/5y forecast from a
+# set's real properties). Provider-agnostic; the project owner pastes
+# their key once at the account level.
+[ai]
+required    = true
+providers   = ["anthropic"]
+description = "Claude is used for two things: identifying LEGO sets from camera photos, and estimating market value + price forecasts from each set's properties."
+
+# Optional. With a Rebrickable key (free at rebrickable.com/api) the
+# catalog expands from 30 curated sets to the entire LEGO universe
+# (~20,000 sets, every set ever made). Without a key the seeded
+# catalog still works.
+[[secret]]
+key         = "REBRICKABLE_API_KEY"
+required    = false
+expose      = true
+description = "Rebrickable API key. Free signup at rebrickable.com/api — unlocks the full LEGO catalog (~20,000 sets). Optional; the app uses a curated 30-set catalog when blank."

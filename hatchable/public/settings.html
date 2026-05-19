@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0">
+<meta name="theme-color" content="#F5F1E8">
+<meta name="description" content="Brickvault — admin & settings.">
+<title>Brickvault — settings</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Geist:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="/app.css">
+
+<style>
+  /* Page-specific tweaks layered on top of app.css design tokens. */
+  .settings-page {
+    max-width: 460px;
+    margin: 0 auto;
+    padding: 24px 22px 80px;
+    position: relative;
+    z-index: 1;
+  }
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--ink-mute);
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.20em;
+    margin-bottom: 18px;
+    padding: 4px 0;
+    font-weight: 500;
+  }
+  .back-link:hover { color: var(--ink); }
+  .back-link svg { width: 11px; height: 11px; }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border-radius: var(--r-2);
+    padding: 18px;
+    box-shadow: var(--shadow-1);
+  }
+  .stat-card .k {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--ink-mute);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .stat-card .v {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 30px;
+    letter-spacing: -0.024em;
+    color: var(--ink);
+    line-height: 1;
+  }
+  .stat-card .v.mono {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-card .v.small {
+    font-size: 14px;
+    line-height: 1.3;
+    font-family: var(--mono);
+    color: var(--ink-soft);
+  }
+
+  .source-card { padding: 18px; }
+  .source-card .label-row {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--ink-mute);
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+  .source-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .source-row:last-child { border-bottom: 0; padding-bottom: 0; }
+  .source-row:first-child { padding-top: 0; }
+  .source-row .name { font-size: 14px; color: var(--ink-soft); font-weight: 500; }
+  .source-row .count {
+    font-family: var(--mono);
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .source-row .dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+  .dot-seed { background: var(--accent); }
+  .dot-bulk { background: #6B8FA7; }
+  .dot-api  { background: #2F6D43; }
+
+  .action-card {
+    background: var(--surface);
+    border-radius: var(--r-3);
+    padding: 22px 22px 20px;
+    box-shadow: var(--shadow-2);
+    margin: 18px 0;
+  }
+  .action-card h3 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 22px;
+    letter-spacing: -0.020em;
+    margin: 0 0 6px;
+    color: var(--ink);
+  }
+  .action-card p {
+    font-size: 13.5px;
+    color: var(--ink-mute);
+    line-height: 1.55;
+    margin: 0 0 16px;
+  }
+
+  .progress-shell {
+    background: var(--surface-2);
+    border-radius: var(--r-2);
+    padding: 16px;
+    margin-top: 6px;
+  }
+  .progress-status {
+    font-family: var(--sans);
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--ink);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .progress-bar {
+    height: 8px;
+    background: var(--surface);
+    border-radius: var(--r-full);
+    overflow: hidden;
+    box-shadow: inset 0 1px 2px rgba(11,18,32,0.05);
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-soft), var(--accent));
+    border-radius: var(--r-full);
+    width: 0%;
+    transition: width 600ms var(--ease);
+  }
+  .progress-bar-fill.success { background: var(--up); }
+  .progress-bar-fill.error   { background: var(--down); }
+  .progress-detail {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--ink-mute);
+    margin-top: 10px;
+    letter-spacing: 0.04em;
+  }
+  .spinner-sm {
+    display: inline-block;
+    width: 12px; height: 12px;
+    border: 2px solid var(--surface-3);
+    border-top-color: var(--ink);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .note {
+    background: var(--accent-pale);
+    border-radius: var(--r-2);
+    padding: 14px 16px;
+    margin-top: 14px;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: #6F4A1B;
+  }
+  .note strong { font-weight: 600; }
+
+  .section-eyebrow {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.20em;
+    color: var(--ink-mute);
+    font-weight: 500;
+    margin: 30px 0 12px;
+  }
+
+  .toast {
+    position: fixed;
+    top: 22px;
+    left: 50%;
+    transform: translate(-50%, -120px);
+    background: var(--ink);
+    color: #fff;
+    padding: 12px 18px;
+    border-radius: var(--r-full);
+    font-size: 13px;
+    font-weight: 500;
+    z-index: 100;
+    box-shadow: var(--shadow-3);
+    transition: transform .4s var(--ease);
+  }
+  .toast.show { transform: translate(-50%, 0); }
+  .toast.success { background: var(--up); }
+  .toast.error   { background: var(--down); }
+</style>
+</head>
+<body>
+
+<div class="settings-page">
+  <a class="back-link" href="/">
+    <svg fill="none" viewBox="0 0 12 12" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M7 3l-3 3 3 3"/>
+    </svg>
+    Back to Brickvault
+  </a>
+
+  <div class="eyebrow mb-8" style="font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:0.20em;color:var(--ink-mute);font-weight:500">Admin</div>
+  <h1 class="h-display" style="font-family:var(--serif);font-weight:400;font-size:42px;line-height:0.96;letter-spacing:-0.028em;color:var(--ink);margin:0 0 28px">Settings</h1>
+
+  <!-- Stats -->
+  <div class="section-eyebrow" style="margin-top:0">Catalog</div>
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="k">Total sets</div>
+      <div class="v mono" id="totalSets">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="k">Last import</div>
+      <div class="v small" id="lastImportTime">Loading…</div>
+    </div>
+  </div>
+
+  <div class="stat-card source-card">
+    <div class="label-row">By source</div>
+    <div id="sourceList">
+      <div class="muted text-sm" style="font-size:13px;color:var(--ink-mute)">Loading…</div>
+    </div>
+  </div>
+
+  <!-- Import action -->
+  <div class="action-card">
+    <h3>Import full LEGO catalog</h3>
+    <p>Pull ~20,000 sets from Rebrickable's free bulk dump directly into your project's database. After this, search and detail pages serve from local cache — no API round-trips needed.</p>
+
+    <div id="importIdle">
+      <button class="primary-btn" id="startImportBtn">
+        <span id="startBtnLabel">Import full catalog</span>
+      </button>
+    </div>
+
+    <div id="importProgress" hidden>
+      <div class="progress-shell">
+        <div class="progress-status" id="progressStatus">
+          <span class="spinner-sm" id="progressSpinner"></span>
+          <span id="progressLabel">Starting import…</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-bar-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-detail" id="progressDetail">Fetching catalog files from cdn.rebrickable.com</div>
+      </div>
+    </div>
+
+    <div class="note">
+      <strong>What happens:</strong> Curated/seeded sets (with hand-tuned valuations) are preserved. Bulk-imported sets start with a formula valuation and get upgraded to AI-priced on first detail view, then cached. Re-running the import is safe — it skips rows that already exist.
+    </div>
+  </div>
+
+  <!-- Auth / accounts section -->
+  <div class="section-eyebrow">Accounts &amp; sign-in</div>
+  <div class="action-card">
+    <h3>How sign-in works today</h3>
+    <p style="margin-bottom:8px">This project is in <strong>personal</strong> visibility, which means every visitor signs in with their Hatchable account. Each authenticated visitor automatically gets their own private collection.</p>
+    <p style="margin-bottom:0">Google sign-in isn't currently a supported provider in Hatchable. The platform supports passwordless email (6-digit code) and passkeys (Touch ID, Face ID, Windows Hello, hardware keys). These typically beat Google OAuth on UX since there's no third-party redirect.</p>
+    <div class="note" style="background:#EFF5EE;color:#1F4D2E">
+      <strong>To open this to strangers:</strong> switch the project's visibility to <em>app</em> tier from the Hatchable console, and we'll add the email + passkey login flow then. For now, you and any invited Hatchable users each get isolated collections.
+    </div>
+  </div>
+
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const API = (window.__HATCHABLE__ && window.__HATCHABLE__.api) || "/api";
+const $ = sel => document.querySelector(sel);
+
+function fmt(n) { return Number(n || 0).toLocaleString("en-US"); }
+
+function fmtAgo(iso) {
+  if (!iso) return "Never";
+  const d = new Date(iso);
+  const sec = (Date.now() - d.getTime()) / 1000;
+  if (sec < 60) return "Just now";
+  if (sec < 3600) return Math.floor(sec / 60) + " min ago";
+  if (sec < 86400) return Math.floor(sec / 3600) + " hr ago";
+  const days = Math.floor(sec / 86400);
+  if (days < 30) return days + " days ago";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+const SOURCE_LABELS = {
+  "seed":             { label: "Curated (hand-picked)", dot: "dot-seed" },
+  "rebrickable_bulk": { label: "Rebrickable bulk dump", dot: "dot-bulk" },
+  "rebrickable":      { label: "Rebrickable API (live)", dot: "dot-api"  },
+};
+
+function toast(msg, kind = "") {
+  const t = $("#toast");
+  t.className = "toast " + kind;
+  t.textContent = msg;
+  requestAnimationFrame(() => t.classList.add("show"));
+  setTimeout(() => t.classList.remove("show"), 2800);
+}
+
+async function loadStatus() {
+  try {
+    const r = await fetch(API + "/admin/import-status");
+    if (!r.ok) throw new Error(r.status + " " + r.statusText);
+    const data = await r.json();
+    paintStatus(data);
+    return data;
+  } catch (e) {
+    $("#sourceList").innerHTML = '<div style="font-size:13px;color:var(--down)">Failed to load: ' + (e.message || "unknown") + "</div>";
+  }
+}
+
+function paintStatus(data) {
+  $("#totalSets").textContent = fmt(data.catalog_count);
+
+  if (data.last_run) {
+    const run = data.last_run;
+    if (run.status === "running") {
+      $("#lastImportTime").textContent = "In progress";
+    } else if (run.completed_at) {
+      $("#lastImportTime").textContent = fmtAgo(run.completed_at) +
+        (run.status === "error" ? " (failed)" : "");
+    } else {
+      $("#lastImportTime").textContent = "Never";
+    }
+  } else {
+    $("#lastImportTime").textContent = "Never";
+  }
+
+  const list = $("#sourceList");
+  list.innerHTML = "";
+  const sources = data.by_source || [];
+  if (sources.length === 0) {
+    list.innerHTML = '<div style="font-size:13px;color:var(--ink-mute)">Catalog is empty — run an import to populate.</div>';
+    return;
+  }
+  sources.forEach(s => {
+    const info = SOURCE_LABELS[s.source] || { label: s.source, dot: "dot-bulk" };
+    const row = document.createElement("div");
+    row.className = "source-row";
+    row.innerHTML =
+      '<span class="name"><span class="dot ' + info.dot + '"></span>' + info.label + "</span>" +
+      '<span class="count">' + fmt(s.n) + "</span>";
+    list.appendChild(row);
+  });
+
+  // If most recently-completed run was a success, change button label to "Re-import"
+  if (data.last_run?.status === "success") {
+    $("#startBtnLabel").textContent = "Re-import catalog";
+  }
+}
+
+let polling = null;
+function stopPolling() { if (polling) { clearInterval(polling); polling = null; } }
+
+async function startImport() {
+  $("#importIdle").hidden = true;
+  $("#importProgress").hidden = false;
+  $("#progressLabel").textContent = "Starting import…";
+  $("#progressDetail").textContent = "Fetching catalog files from cdn.rebrickable.com";
+  $("#progressFill").style.width = "5%";
+  $("#progressFill").classList.remove("success", "error");
+  $("#progressSpinner").style.display = "inline-block";
+
+  // Fire the request — runs for 15-30 seconds
+  const importPromise = fetch(API + "/admin/import-rebrickable", { method: "POST" })
+    .then(async r => {
+      const txt = await r.text();
+      try { return { http: r.status, body: JSON.parse(txt) }; }
+      catch { return { http: r.status, body: { ok: false, error: txt.slice(0, 200) } }; }
+    })
+    .catch(err => ({ http: 0, body: { ok: false, error: err.message } }));
+
+  // Poll status while it runs
+  stopPolling();
+  let polls = 0;
+  polling = setInterval(async () => {
+    polls++;
+    try {
+      const r = await fetch(API + "/admin/import-status");
+      if (!r.ok) return;
+      const data = await r.json();
+      if (!data.last_run) return;
+      const run = data.last_run;
+
+      if (run.status === "running") {
+        if (run.themes_loaded > 0 && run.sets_total > 0) {
+          $("#progressLabel").textContent =
+            "Importing sets · " + fmt(run.sets_loaded) + " of " + fmt(run.sets_total);
+          const pct = Math.max(8, Math.min(96, (run.sets_loaded / run.sets_total) * 100));
+          $("#progressFill").style.width = pct + "%";
+          $("#progressDetail").textContent =
+            fmt(run.themes_loaded) + " themes loaded · " + fmt(run.sets_loaded) + " sets inserted";
+        } else if (run.themes_loaded > 0) {
+          $("#progressLabel").textContent = "Themes loaded, preparing sets…";
+          $("#progressFill").style.width = "15%";
+        } else {
+          $("#progressLabel").textContent = "Loading theme tree…";
+          $("#progressFill").style.width = "8%";
+        }
+      } else if (run.status === "success") {
+        finishImport(true, run);
+      } else if (run.status === "error") {
+        finishImport(false, run);
+      }
+    } catch {}
+    if (polls > 120) stopPolling(); // safety: 3 minutes max
+  }, 1500);
+
+  // When the POST resolves, sync up
+  importPromise.then(result => {
+    if (result.body && !result.body.ok && result.body.error) {
+      finishImport(false, { error: result.body.error });
+    }
+  });
+}
+
+function finishImport(success, run) {
+  stopPolling();
+  $("#progressSpinner").style.display = "none";
+  $("#progressFill").style.width = "100%";
+  $("#progressFill").classList.add(success ? "success" : "error");
+
+  if (success) {
+    $("#progressLabel").textContent =
+      "Imported " + fmt(run.sets_loaded || 0) + " sets";
+    $("#progressDetail").textContent =
+      fmt(run.themes_loaded || 0) + " themes · " +
+      fmt(run.sets_skipped || 0) + " skipped (duplicates or placeholders)";
+    toast("Catalog imported", "success");
+  } else {
+    $("#progressLabel").textContent = "Import failed";
+    $("#progressDetail").textContent = (run?.error || "Unknown error").slice(0, 200);
+    toast("Import failed", "error");
+  }
+
+  setTimeout(() => {
+    $("#importIdle").hidden = false;
+    $("#importProgress").hidden = true;
+    loadStatus();
+  }, success ? 2200 : 4500);
+}
+
+$("#startImportBtn").addEventListener("click", startImport);
+
+loadStatus();
+</script>
+
+</body>
+</html>
