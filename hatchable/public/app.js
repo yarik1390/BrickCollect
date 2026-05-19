@@ -8,9 +8,14 @@ const API = (window.__HATCHABLE__ && window.__HATCHABLE__.api) || "/api";
 const state = {
   portfolio: null,
   catalog: null,
+  catalogAll: [],
+  catalogPage: 1,
+  catalogPageSize: 12,
   themes: [],
   filter: { kind: "all", theme: null, range: "1M" },
   toastTimer: null,
+  detail: { tab: "info" },
+  pwa: { deferredPrompt: null },
   // camera
   camera: {
     stream: null,
@@ -53,6 +58,10 @@ function fmtMoneyShort(n) {
   return "$" + f.toFixed(2);
 }
 function pct(a, b) { if (!b) return 0; return ((a - b) / b) * 100; }
+
+function haptic(style = "light") {
+  if (navigator.vibrate) navigator.vibrate(style === "heavy" ? 30 : style === "medium" ? 15 : 8);
+}
 
 function toast(msg, kind = "") {
   const t = $("#toast");
@@ -217,7 +226,10 @@ async function loadCatalog(q = "", theme = null) {
   const params = new URLSearchParams();
   if (q)     params.set("q", q);
   if (theme) params.set("theme", theme);
+  params.set("limit", "60");
   state.catalog = await api("/sets/search?" + params.toString());
+  state.catalogAll = state.catalog?.sets || [];
+  state.catalogPage = 1;
 }
 async function loadThemes() {
   const r = await api("/themes");
@@ -386,8 +398,8 @@ function paintPortfolio() {
       </div>
 
       ${sets.length === 0 ? renderEmptyPortfolio() : `
-        <div class="grid">
-          ${sets.map(setCardHTML).join("")}
+        <div class="set-list">
+          ${sets.map(setListCardHTML).join("")}
         </div>
       `}
     </div>
@@ -462,6 +474,32 @@ function setCardHTML(item) {
   `;
 }
 
+function setListCardHTML(item) {
+  const v = item.current_value * item.quantity;
+  const paid = (item.purchase_price || item.retail_price) * item.quantity;
+  const d = pct(v, paid);
+  const dSign = d >= 0 ? "up" : "down";
+  return `
+    <a class="set-list-card" href="#/set/${encodeURIComponent(item.set_num)}">
+      <div class="sl-img">
+        <img src="${item.image_url}" alt="${item.name}" loading="lazy" onerror="this.style.opacity=0.15">
+        ${item.quantity > 1 ? `<span class="qty-badge">×${item.quantity}</span>` : ""}
+      </div>
+      <div class="sl-body">
+        <div class="sl-name">${item.name}</div>
+        <div class="sl-meta">#${item.set_num} · ${item.theme || "—"}</div>
+      </div>
+      <div class="sl-right">
+        <div class="sl-value">${fmtMoney(v)}</div>
+        ${paid ? `<div class="sl-delta ${dSign}">
+          ${dSign === "up" ? I.trend : I.trendDn}
+          ${d >= 0 ? "+" : ""}${d.toFixed(1)}%
+        </div>` : ""}
+      </div>
+    </a>
+  `;
+}
+
 // =============================================================
 // Set detail
 // =============================================================
@@ -513,16 +551,18 @@ function paintSetDetail(set, entry) {
   const hist = buildHistory(set.set_num, set.retail_price, set.current_value, 30);
   const fc2pct = pct(set.forecast_2y, set.current_value);
   const fc5pct = pct(set.forecast_5y, set.current_value);
-
-  // Bar fill width: 2y normalized to (5y - current) scale gives visual hierarchy
   const maxGain = Math.max(set.forecast_5y, set.current_value * 1.5);
   const bar2 = Math.min(100, ((set.forecast_2y - set.current_value) / (maxGain - set.current_value)) * 100);
   const bar5 = Math.min(100, ((set.forecast_5y - set.current_value) / (maxGain - set.current_value)) * 100);
 
+  const tab = state.detail.tab;
+  const panelId = { info: "tabInfo", forecast: "tabForecast", manage: "tabManage" };
+
   root.innerHTML = `
-    <div class="page">
+    <div class="page no-pad-top">
       <div class="detail-top">
         <button class="icon-btn" id="closeBtn" aria-label="Close">${I.close}</button>
+        <span class="detail-top-title" id="detailTopTitle">${set.name}</span>
         <div class="icon-row">
           <button class="icon-btn" aria-label="Share">${I.share}</button>
           <button class="icon-btn" aria-label="Save">${I.heart}</button>
@@ -542,83 +582,107 @@ function paintSetDetail(set, entry) {
         </div>
       </div>
 
-      <div class="card market-card">
-        <div class="hero-label">Market value · ${qty > 1 ? `${qty} units` : "1 unit"}</div>
-        <div class="big">${fmtMoney(currentTotal)}</div>
-        <div class="row-between mt-8">
-          <span class="delta ${dSign}">
-            ${dSign === "up" ? I.trend : I.trendDn}
-            <span>${retailDelta >= 0 ? "+" : ""}${retailDelta.toFixed(1)}%</span>
-            <span style="opacity:.55">vs retail</span>
-          </span>
-          <span class="font-mono text-sm muted">${fmtMoney(set.retail_price)}</span>
-        </div>
-        <div class="sparkline" id="setChart"></div>
+      <div class="detail-tabs">
+        <button class="detail-tab ${tab === "info" ? "active" : ""}" data-tab="info">Info</button>
+        <button class="detail-tab ${tab === "forecast" ? "active" : ""}" data-tab="forecast">Forecast</button>
+        <button class="detail-tab ${tab === "manage" ? "active" : ""}" data-tab="manage">Manage</button>
       </div>
 
-      <div class="stats-grid">
-        <div class="stat">
-          <div class="k">Theme</div>
-          <div class="v">${set.theme || "—"}</div>
+      <div class="detail-tab-panel ${tab === "info" ? "active" : ""}" id="tabInfo">
+        <div class="card market-card">
+          <div class="hero-label">Market value · ${qty > 1 ? `${qty} units` : "1 unit"}</div>
+          <div class="big">${fmtMoney(currentTotal)}</div>
+          <div class="row-between mt-8">
+            <span class="delta ${dSign}">
+              ${dSign === "up" ? I.trend : I.trendDn}
+              <span>${retailDelta >= 0 ? "+" : ""}${retailDelta.toFixed(1)}%</span>
+              <span style="opacity:.55">vs retail</span>
+            </span>
+            <span class="font-mono text-sm muted">${fmtMoney(set.retail_price)}</span>
+          </div>
+          <div class="sparkline" id="setChart"></div>
         </div>
-        <div class="stat">
-          <div class="k">Year</div>
-          <div class="v mono">${set.year || "—"}</div>
-        </div>
-        <div class="stat">
-          <div class="k">Pieces</div>
-          <div class="v mono">${(set.pieces || 0).toLocaleString()}</div>
-        </div>
-        <div class="stat">
-          <div class="k">Minifigs</div>
-          <div class="v mono">${set.minifigs || 0}</div>
+        <div class="stats-grid">
+          <div class="stat"><div class="k">Theme</div><div class="v">${set.theme || "—"}</div></div>
+          <div class="stat"><div class="k">Year</div><div class="v mono">${set.year || "—"}</div></div>
+          <div class="stat"><div class="k">Pieces</div><div class="v mono">${(set.pieces || 0).toLocaleString()}</div></div>
+          <div class="stat"><div class="k">Minifigs</div><div class="v mono">${set.minifigs || 0}</div></div>
         </div>
       </div>
 
-      <div class="card forecast-card">
-        <h4>Forecast</h4>
-        <div class="subhead">Projected market value</div>
-        <div class="forecast-row year-2">
-          <span class="forecast-when">2 yr</span>
-          <div class="forecast-bar"><div class="forecast-bar-fill" style="width:${bar2}%"></div></div>
-          <span class="forecast-amt">${fmtMoneyShort(set.forecast_2y)}</span>
-          <span class="forecast-gain">+${fc2pct.toFixed(0)}%</span>
-        </div>
-        <div class="forecast-row year-5">
-          <span class="forecast-when">5 yr</span>
-          <div class="forecast-bar"><div class="forecast-bar-fill" style="width:${bar5}%"></div></div>
-          <span class="forecast-amt">${fmtMoneyShort(set.forecast_5y)}</span>
-          <span class="forecast-gain">+${fc5pct.toFixed(0)}%</span>
-        </div>
-        ${set.description ? `<p class="muted text-sm mt-16" style="margin:18px 0 0;line-height:1.5">${set.description}</p>` : ""}
-      </div>
-
-      <div class="card qty-card">
-        <div class="qty-label">${I.box}<span>${qty > 0 ? "In your collection" : "Add to collection"}</span></div>
-        <div class="qty-controls">
-          <button class="qty-btn minus" ${qty === 0 ? "disabled" : ""}>−</button>
-          <span class="qty-value">${qty}</span>
-          <button class="qty-btn plus">+</button>
+      <div class="detail-tab-panel ${tab === "forecast" ? "active" : ""}" id="tabForecast">
+        <div class="card forecast-card">
+          <h4>Forecast</h4>
+          <div class="subhead">Projected market value</div>
+          <div class="forecast-row year-2">
+            <span class="forecast-when">2 yr</span>
+            <div class="forecast-bar"><div class="forecast-bar-fill" style="width:${bar2}%"></div></div>
+            <span class="forecast-amt">${fmtMoneyShort(set.forecast_2y)}</span>
+            <span class="forecast-gain">+${fc2pct.toFixed(0)}%</span>
+          </div>
+          <div class="forecast-row year-5">
+            <span class="forecast-when">5 yr</span>
+            <div class="forecast-bar"><div class="forecast-bar-fill" style="width:${bar5}%"></div></div>
+            <span class="forecast-amt">${fmtMoneyShort(set.forecast_5y)}</span>
+            <span class="forecast-gain">+${fc5pct.toFixed(0)}%</span>
+          </div>
+          ${set.description ? `<p class="muted text-sm" style="margin:18px 0 0;line-height:1.5">${set.description}</p>` : ""}
         </div>
       </div>
 
-      ${qty > 0 ? `<button class="danger-btn" id="removeBtn">Remove from collection</button>` : ""}
+      <div class="detail-tab-panel ${tab === "manage" ? "active" : ""}" id="tabManage">
+        <div class="card qty-card">
+          <div class="qty-label">${I.box}<span>${qty > 0 ? "In your collection" : "Add to collection"}</span></div>
+          <div class="qty-controls">
+            <button class="qty-btn minus" ${qty === 0 ? "disabled" : ""}>−</button>
+            <span class="qty-value">${qty}</span>
+            <button class="qty-btn plus">+</button>
+          </div>
+        </div>
+        ${qty > 0 ? `<button class="danger-btn" id="removeBtn">Remove from collection</button>` : ""}
+      </div>
     </div>
   `;
 
-  // chart
-  renderChart($("#setChart"), hist, {
-    h: 64, stroke: dSign === "up" ? "#2F6D43" : "#A53224",
-    dot: true,
-    scrubLabelFor: (v) => fmtMoneyShort(v),
+  // Render chart if info tab is active
+  if (tab === "info") {
+    renderChart($("#setChart"), hist, {
+      h: 64, stroke: dSign === "up" ? "#2F6D43" : "#A53224",
+      dot: true, scrubLabelFor: (v) => fmtMoneyShort(v),
+    });
+  }
+
+  // Tab switching
+  $$(".detail-tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+      state.detail.tab = btn.dataset.tab;
+      $$(".detail-tab").forEach(t => t.classList.toggle("active", t === btn));
+      $$(".detail-tab-panel").forEach(p => p.classList.toggle("active", p.id === panelId[btn.dataset.tab]));
+      if (state.detail.tab === "info" && !$("#setChart")?.children.length) {
+        renderChart($("#setChart"), hist, {
+          h: 64, stroke: dSign === "up" ? "#2F6D43" : "#A53224",
+          dot: true, scrubLabelFor: (v) => fmtMoneyShort(v),
+        });
+      }
+    });
   });
+
+  // Sticky title: fade in after scrolling past hero
+  const detailTopTitle = $("#detailTopTitle");
+  function onDetailScroll() {
+    const hero = $(".detail-hero");
+    if (!hero) { window.removeEventListener("scroll", onDetailScroll); return; }
+    const past = window.scrollY > hero.offsetTop + hero.offsetHeight - 60;
+    detailTopTitle?.classList.toggle("show", past);
+  }
+  window.addEventListener("scroll", onDetailScroll, { passive: true });
 
   $("#closeBtn").addEventListener("click", () => {
     if (history.length > 1) history.back();
     else location.hash = "#/";
   });
 
-  $(".qty-btn.plus").addEventListener("click", async () => {
+  $(".qty-btn.plus")?.addEventListener("click", async () => {
     try {
       await addToCollection(set.set_num, qty + 1);
       await loadPortfolio();
@@ -626,7 +690,7 @@ function paintSetDetail(set, entry) {
       if (qty === 0) toast("Added to collection", "success");
     } catch (e) { toast(e.message, "error"); }
   });
-  $(".qty-btn.minus").addEventListener("click", async () => {
+  $(".qty-btn.minus")?.addEventListener("click", async () => {
     if (qty <= 0) return;
     try {
       if (qty - 1 === 0) await removeFromCollection(entry.id);
@@ -636,7 +700,6 @@ function paintSetDetail(set, entry) {
       paintSetDetail(set, next);
     } catch (e) { toast(e.message, "error"); }
   });
-
   $("#removeBtn")?.addEventListener("click", async () => {
     if (!entry) return;
     if (!confirm("Remove this set from your collection?")) return;
@@ -660,16 +723,15 @@ async function renderAdd() {
       <div class="eyebrow mb-8">Catalog</div>
       <h1 class="h-display mb-24">Add a set</h1>
 
-      <div class="scan-cta" id="scanCta">
-        <div class="label">Camera</div>
-        <h2>Scan a box</h2>
-        <p>Point at any set's barcode or instructions cover — Claude identifies it instantly.</p>
-        <div class="arrow">${I.scan}</div>
-      </div>
+      <button class="scan-pill mb-16" id="scanCta">
+        ${I.scan}
+        <span>Scan a barcode</span>
+      </button>
 
       <div class="search-wrap mb-12">
         ${I.search}
         <input class="search-input" id="searchInput" placeholder="Search name or set #" autocomplete="off" inputmode="search">
+        <button class="search-clear" id="searchClear" style="display:none" aria-label="Clear">${I.close}</button>
       </div>
 
       <div class="filter-row" id="themeChips">
@@ -694,6 +756,7 @@ async function renderAdd() {
     btn.addEventListener("click", async () => {
       state.filter.theme = state.filter.theme === t.theme ? null : t.theme;
       state.catalog = null;
+      state.catalogPage = 1;
       renderAdd();
     });
     chips.appendChild(btn);
@@ -705,6 +768,7 @@ async function renderAdd() {
     allChip.addEventListener("click", async () => {
       state.filter.theme = null;
       state.catalog = null;
+      state.catalogPage = 1;
       renderAdd();
     });
   }
@@ -720,9 +784,11 @@ async function renderAdd() {
   paintCatalogResults();
 
   const input = $("#searchInput");
+  const clearBtn = $("#searchClear");
   let timer;
   input.addEventListener("input", () => {
     clearTimeout(timer);
+    if (clearBtn) clearBtn.style.display = input.value ? "flex" : "none";
     const q = input.value.trim();
     if (q === "") {
       // immediate clear
@@ -736,15 +802,28 @@ async function renderAdd() {
       catch (e) { toast(e.message, "error"); }
     }, 280);
   });
+  clearBtn?.addEventListener("click", () => {
+    input.value = "";
+    clearBtn.style.display = "none";
+    input.focus();
+    state.catalogPage = 1;
+    $("#results").innerHTML = `<div class="loading-more"><span class="spinner"></span>Loading…</div>`;
+    loadCatalog("", state.filter.theme).then(paintCatalogResults).catch(() => {});
+  });
 }
 
 function paintCatalogResults() {
   const wrap = $("#results");
   if (!wrap) return;
   const ownedSet = new Set((state.portfolio?.items || []).map(i => i.set_num));
-  const sets = state.catalog?.sets || [];
+  const allSets = state.catalogAll || [];
+  const page = state.catalogPage;
+  const pageSize = state.catalogPageSize;
+  const totalPages = Math.ceil(allSets.length / pageSize);
+  const start = (page - 1) * pageSize;
+  const sets = allSets.slice(start, start + pageSize);
 
-  if (sets.length === 0) {
+  if (allSets.length === 0) {
     wrap.innerHTML = `
       <div class="empty">
         <h3>No matches</h3>
@@ -753,19 +832,29 @@ function paintCatalogResults() {
     return;
   }
 
-  wrap.innerHTML = sets.map(s => `
-    <div class="add-result ${ownedSet.has(s.set_num) ? "owned" : ""}" data-set="${encodeURIComponent(s.set_num)}">
-      <img src="${s.image_url}" alt="${s.name}" loading="lazy" onerror="this.style.opacity=0.15">
-      <div class="info">
-        <h4>${s.name}</h4>
-        <div class="meta">#${s.set_num} · ${s.theme || "—"}${s.year ? " · " + s.year : ""}</div>
-        <div class="price">${fmtMoney(s.current_value || 0)}</div>
+  wrap.innerHTML = `
+    <div class="results-count">Showing ${start + 1}–${Math.min(start + pageSize, allSets.length)} of ${allSets.length} sets</div>
+    ${sets.map(s => `
+      <div class="add-result ${ownedSet.has(s.set_num) ? "owned" : ""}" data-set="${encodeURIComponent(s.set_num)}">
+        <img src="${s.image_url}" alt="${s.name}" loading="lazy" onerror="this.style.opacity=0.15">
+        <div class="info">
+          <h4>${s.name}</h4>
+          <div class="meta">#${s.set_num} · ${s.theme || "—"}${s.year ? " · " + s.year : ""}</div>
+          <div class="price">${fmtMoney(s.current_value || 0)}</div>
+        </div>
+        <button class="check" data-action="${ownedSet.has(s.set_num) ? "view" : "add"}" aria-label="${ownedSet.has(s.set_num) ? "Owned" : "Add"}">
+          ${ownedSet.has(s.set_num) ? I.check : I.plus}
+        </button>
       </div>
-      <button class="check" data-action="${ownedSet.has(s.set_num) ? "view" : "add"}" aria-label="${ownedSet.has(s.set_num) ? "Owned" : "Add"}">
-        ${ownedSet.has(s.set_num) ? I.check : I.plus}
-      </button>
-    </div>
-  `).join("");
+    `).join("")}
+    ${totalPages > 1 ? `
+      <div class="pagination-bar">
+        <button class="page-btn" id="prevPage" ${page <= 1 ? "disabled" : ""}>‹</button>
+        <span class="page-label">Page <strong>${page}</strong> of ${totalPages}</span>
+        <button class="page-btn" id="nextPage" ${page >= totalPages ? "disabled" : ""}>›</button>
+      </div>
+    ` : ""}
+  `;
 
   $$(".add-result").forEach(el => {
     el.addEventListener("click", async (e) => {
@@ -778,6 +867,17 @@ function paintCatalogResults() {
       }
       location.hash = "#/set/" + encodeURIComponent(setNum);
     });
+  });
+
+  $("#prevPage")?.addEventListener("click", () => {
+    state.catalogPage--;
+    paintCatalogResults();
+    wrap.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  $("#nextPage")?.addEventListener("click", () => {
+    state.catalogPage++;
+    paintCatalogResults();
+    wrap.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 }
 
@@ -850,13 +950,15 @@ function renderPile() {
 // =============================================================
 // Blind Bag page
 // =============================================================
+const BLIND_SAMPLE = [
+  { name: "Mr. Gold",          series: "Minifigures",   rarity: "legendary", value: 1450,  image_url: "https://images.brickset.com/sets/large/col325-1.jpg" },
+  { name: "Boba Fett",         series: "Star Wars",     rarity: "rare",      value: 48,    image_url: "https://images.brickset.com/sets/large/sw0908-1.jpg" },
+  { name: "Mariachi",          series: "Minifigures",   rarity: "uncommon",  value: 8.5,   image_url: "https://images.brickset.com/sets/large/col265-1.jpg" },
+  { name: "Golden Master Wu",  series: "Ninjago",       rarity: "rare",      value: 32,    image_url: "https://images.brickset.com/sets/large/njo493-1.jpg" },
+];
+
 function renderBlind() {
-  const sample = [
-    { name: "Mr. Gold",          series: "Series 10",     rarity: "legendary", value: 1450,  image_url: "https://images.brickset.com/sets/large/col325-1.jpg" },
-    { name: "Boba Fett",         series: "Star Wars",     rarity: "rare",      value: 48,    image_url: "https://images.brickset.com/sets/large/sw0908-1.jpg" },
-    { name: "Mariachi",          series: "Series 16",     rarity: "uncommon",  value: 8.5,   image_url: "https://images.brickset.com/sets/large/col265-1.jpg" },
-    { name: "Golden Master Wu",  series: "Ninjago",       rarity: "rare",      value: 32,    image_url: "https://images.brickset.com/sets/large/njo493-1.jpg" },
-  ];
+  const sample = BLIND_SAMPLE;
 
   $("#root").innerHTML = `
     <div class="page">
@@ -893,6 +995,27 @@ function renderBlind() {
     </div>
   `;
   $("#scanCta").addEventListener("click", openScan);
+
+  // Wire blind bag filter chips
+  const seriesNames = ["All series", "Minifigures", "Star Wars", "Ninjago", "Harry Potter"];
+  $$(".filter-row .chip").forEach((chip, i) => {
+    chip.addEventListener("click", () => {
+      $$(".filter-row .chip").forEach(c => c.classList.remove("active"));
+      chip.classList.add("active");
+      const label = seriesNames[i];
+      const filtered = label === "All series" ? sample : sample.filter(f => f.series === label);
+      const grid = $(".grid");
+      if (grid) grid.innerHTML = filtered.map(f => `
+        <div class="fig-card">
+          <span class="rarity rarity-${f.rarity}">${f.rarity}</span>
+          <img src="${f.image_url}" alt="${f.name}" onerror="this.style.opacity=0.2">
+          <div class="name">${f.name}</div>
+          <div class="muted text-xs mb-4">${f.series}</div>
+          <div class="value">${fmtMoney(f.value)}</div>
+        </div>
+      `).join("");
+    });
+  });
 }
 
 // =============================================================
@@ -1095,6 +1218,82 @@ document.addEventListener("DOMContentLoaded", () => {
 window.bv = { openScan, closeScan, capturePhoto };
 
 // =============================================================
+// PWA install prompt
+// =============================================================
+(function initPWA() {
+  if (window.matchMedia("(display-mode: standalone)").matches) return;
+  if (localStorage.getItem("bv_pwa_dismissed")) return;
+
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    state.pwa.deferredPrompt = e;
+    setTimeout(showInstallBanner, 2000);
+  });
+
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+  if (isIOS) setTimeout(showInstallBanner, 2500);
+})();
+
+function showInstallBanner() {
+  if (localStorage.getItem("bv_pwa_dismissed")) return;
+  if ($("#installBanner")) return;
+  const banner = document.createElement("div");
+  banner.id = "installBanner";
+  banner.className = "install-banner";
+  banner.innerHTML = `
+    <div class="ib-icon"><span class="brand-mark" style="width:24px;height:24px;border-radius:5px;flex-shrink:0"></span></div>
+    <div class="ib-body">
+      <div class="ib-title">Install Brickvault</div>
+      <div class="ib-sub">Add to your home screen</div>
+    </div>
+    <button class="ib-install" id="installBtn">Install</button>
+    <button class="ib-dismiss" id="dismissInstall" aria-label="Dismiss">${I.close}</button>
+  `;
+  document.body.appendChild(banner);
+  requestAnimationFrame(() => banner.classList.add("show"));
+  $("#installBtn").addEventListener("click", handleInstall);
+  $("#dismissInstall").addEventListener("click", () => {
+    banner.classList.remove("show");
+    setTimeout(() => banner.remove(), 400);
+    localStorage.setItem("bv_pwa_dismissed", "1");
+  });
+}
+
+async function handleInstall() {
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+  if (isIOS) { showIOSSheet(); return; }
+  if (state.pwa.deferredPrompt) {
+    state.pwa.deferredPrompt.prompt();
+    const { outcome } = await state.pwa.deferredPrompt.userChoice;
+    state.pwa.deferredPrompt = null;
+    if (outcome === "accepted") $("#installBanner")?.remove();
+  }
+}
+
+function showIOSSheet() {
+  if ($("#iosInstallSheet")) return;
+  const sheet = document.createElement("div");
+  sheet.id = "iosInstallSheet";
+  sheet.className = "ios-sheet";
+  sheet.innerHTML = `
+    <div class="ios-sheet-inner">
+      <div class="ios-sheet-handle"></div>
+      <h3>Add to Home Screen</h3>
+      <p>Tap <span class="ios-share-icon">${I.share}</span> in the Safari toolbar, then tap <strong>"Add to Home Screen"</strong> to install Brickvault as an app.</p>
+      <button class="primary-btn" id="closeIOSSheet" style="width:100%">Got it</button>
+    </div>
+  `;
+  document.body.appendChild(sheet);
+  requestAnimationFrame(() => sheet.classList.add("show"));
+  sheet.addEventListener("click", (e) => { if (e.target === sheet) closeIOSSheet(); });
+  $("#closeIOSSheet").addEventListener("click", closeIOSSheet);
+  function closeIOSSheet() {
+    sheet.classList.remove("show");
+    setTimeout(() => sheet.remove(), 350);
+  }
+}
+
+// =============================================================
 // Router
 // =============================================================
 function setActiveNav(route) {
@@ -1106,8 +1305,17 @@ function setActiveNav(route) {
   });
 }
 
+let _prevRoute = null;
 async function route() {
   const hash = (location.hash || "#/").replace(/^#/, "");
+  const root = $("#root");
+
+  const isDetail = hash.startsWith("/set/");
+  const wasDetail = _prevRoute && _prevRoute.startsWith("/set/");
+  const goingBack = wasDetail && !isDetail;
+  if (root) root.classList.toggle("nav-back", goingBack);
+  _prevRoute = hash;
+
   setActiveNav(hash.split("/").slice(0, 2).join("/") || "/");
   window.scrollTo({ top: 0, behavior: "instant" });
 
@@ -1122,4 +1330,79 @@ async function route() {
 
 window.addEventListener("hashchange", route);
 window.addEventListener("DOMContentLoaded", route);
+
+// =============================================================
+// Pull-to-refresh (portfolio page only)
+// =============================================================
+(function () {
+  let ptrStartY = 0;
+  let ptrActive = false;
+  const THRESHOLD = 72;
+
+  function isPortfolioPage() {
+    const h = (location.hash || "#/").replace(/^#/, "");
+    return h === "/" || h === "";
+  }
+
+  document.addEventListener("touchstart", (e) => {
+    if (!isPortfolioPage()) return;
+    if (window.scrollY > 4) return;
+    ptrStartY = e.touches[0].clientY;
+    ptrActive = true;
+  }, { passive: true });
+
+  document.addEventListener("touchmove", (e) => {
+    if (!ptrActive) return;
+    const dy = e.touches[0].clientY - ptrStartY;
+    if (dy > THRESHOLD / 2) {
+      const ptr = $("#ptrIndicator");
+      if (ptr) ptr.classList.add("visible");
+    }
+  }, { passive: true });
+
+  document.addEventListener("touchend", (e) => {
+    if (!ptrActive) return;
+    ptrActive = false;
+    const ptr = $("#ptrIndicator");
+    const dy = (e.changedTouches[0]?.clientY || 0) - ptrStartY;
+    if (dy >= THRESHOLD && isPortfolioPage()) {
+      haptic("medium");
+      state.portfolio = null;
+      route();
+      setTimeout(() => { if (ptr) ptr.classList.remove("visible"); }, 800);
+    } else {
+      if (ptr) ptr.classList.remove("visible");
+    }
+  }, { passive: true });
+})();
+
+// =============================================================
+// Swipe-to-back (from left edge on detail pages)
+// =============================================================
+(function () {
+  let swipeStartX = 0;
+  let swipeStartY = 0;
+  let swipeActive = false;
+  const EDGE = 28;
+  const MIN_DIST = 72;
+
+  document.addEventListener("touchstart", (e) => {
+    if (e.touches[0].clientX > EDGE) return;
+    swipeStartX = e.touches[0].clientX;
+    swipeStartY = e.touches[0].clientY;
+    swipeActive = true;
+  }, { passive: true });
+
+  document.addEventListener("touchend", (e) => {
+    if (!swipeActive) return;
+    swipeActive = false;
+    const dx = e.changedTouches[0].clientX - swipeStartX;
+    const dy = Math.abs(e.changedTouches[0].clientY - swipeStartY);
+    const hash = (location.hash || "#/").replace(/^#/, "");
+    if (dx >= MIN_DIST && dx > dy * 1.5 && hash.startsWith("/set/")) {
+      haptic("light");
+      history.back();
+    }
+  }, { passive: true });
+})();
 if (document.readyState !== "loading") route();

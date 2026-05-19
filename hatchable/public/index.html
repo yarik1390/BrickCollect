@@ -6,7 +6,10 @@
 <meta name="theme-color" content="#F5F1E8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Brickvault">
 <meta name="description" content="Brickvault — a premium LEGO portfolio tracker.">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon.svg">
 <title>Brickvault — collection portfolio</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -50,6 +53,12 @@
     Blind Bag
   </a>
 </nav>
+
+<!-- Pull-to-refresh indicator -->
+<div id="ptrIndicator" class="ptr-indicator">
+  <div class="ptr-spinner"></div>
+  <span>Refreshing…</span>
+</div>
 
 <!-- Toast -->
 <div id="toast" class="toast"></div>
