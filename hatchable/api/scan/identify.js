@@ -57,13 +57,13 @@ async function identifyByImage(res, dataUrl) {
   try {
     const r = await ai.generateText({
       purpose: "scan-identify",
-      model:   "sonnet",
+      model:   "gpt-4o",
       system,
       messages: [{
         role: "user",
         content: [
-          { type: "text",  text: "Which LEGO set is this? Respond with JSON only." },
-          { type: "image", image: dataUrl },
+          { type: "text",      text: "Which LEGO set is this? Respond with JSON only." },
+          { type: "image_url", image_url: { url: dataUrl } },
         ],
       }],
       maxTokens: 300,

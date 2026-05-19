@@ -1634,6 +1634,173 @@ img { display: block; max-width: 100%; }
   animation: spin .7s linear infinite;
 }
 
+/* ============================================================
+   Sort pill (select styled as chip)
+   ============================================================ */
+.sort-pill {
+  flex-shrink: 0;
+  padding: 11px 28px 11px 12px;
+  border-radius: var(--r-full);
+  font-size: 13px;
+  font-family: var(--sans);
+  font-weight: 500;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-soft);
+  white-space: nowrap;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%235E6878' stroke-width='1.8' stroke-linecap='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 14px;
+}
+.sort-pill:hover { border-color: var(--line-strong); }
+
+/* ============================================================
+   Theme breakdown section
+   ============================================================ */
+.theme-section {
+  margin-bottom: 24px;
+  padding-top: 8px;
+}
+.theme-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+}
+.theme-lbl {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  width: 100px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.theme-bar-wrap {
+  flex: 1;
+  height: 7px;
+  background: var(--surface-3);
+  border-radius: var(--r-full);
+  overflow: hidden;
+}
+.theme-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-soft), var(--accent));
+  border-radius: var(--r-full);
+  min-width: 4px;
+  transition: width .6s var(--ease);
+}
+.theme-amt {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  text-align: right;
+  width: 54px;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   Purchase price edit (manage tab)
+   ============================================================ */
+.price-card { margin-bottom: 12px; }
+.price-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.manage-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--ink-mute);
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+.manage-val {
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.manage-date {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--ink-faint);
+  margin-top: 8px;
+}
+.price-input {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: var(--r-1);
+  border: 1.5px solid var(--line-strong);
+  background: var(--surface-2);
+  font-size: 16px;
+  font-family: var(--mono);
+  outline: none;
+}
+.price-input:focus { border-color: var(--ink-soft); background: var(--surface); }
+.price-edit-btns {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+.cancel-sm, .save-sm {
+  padding: 8px 16px;
+  border-radius: var(--r-full);
+  font-size: 13px;
+  font-weight: 500;
+}
+.cancel-sm { background: var(--surface-2); color: var(--ink-soft); }
+.cancel-sm:hover { background: var(--surface-3); }
+.save-sm { background: var(--ink); color: #fff; }
+.save-sm:hover { background: var(--ink-soft); }
+
+/* ============================================================
+   Barcode fallback inline link
+   ============================================================ */
+.scan-text-link {
+  background: none;
+  border: none;
+  color: var(--accent-soft);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+/* ============================================================
+   Pile Scanner tips
+   ============================================================ */
+.pile-tips {
+  margin: -4px 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.pile-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink-mute);
+}
+.tip-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
 /* Smaller phones */
 @media (max-width: 360px) {
   .h-display { font-size: 36px; }

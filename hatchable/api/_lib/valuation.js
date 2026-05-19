@@ -112,7 +112,7 @@ export async function aiValuation(set) {
   try {
     const r = await ai.generateText({
       purpose: "valuation",
-      model:   "haiku",
+      model:   "gpt-4o-mini",
       system,
       prompt:  userText,
       maxTokens: 600,

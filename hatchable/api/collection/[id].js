@@ -22,6 +22,7 @@ export default async function (req, res) {
 
   // PATCH — update quantity / condition / notes
   const { quantity, condition, notes, purchase_price } = req.body || {};
+  if (quantity !== undefined && quantity < 1) return res.status(400).json({ error: "quantity must be at least 1" });
   const { rows } = await db.query(
     `UPDATE user_collection
         SET quantity       = COALESCE($3, quantity),

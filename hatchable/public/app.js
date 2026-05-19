@@ -12,7 +12,7 @@ const state = {
   catalogPage: 1,
   catalogPageSize: 12,
   themes: [],
-  filter: { kind: "all", theme: null, range: "1M" },
+  filter: { kind: "all", theme: null, range: "1M", sort: "added_desc" },
   toastTimer: null,
   detail: { tab: "info" },
   pwa: { deferredPrompt: null },
@@ -235,6 +235,27 @@ async function loadThemes() {
   const r = await api("/themes");
   state.themes = r.themes || [];
 }
+async function shareSet(set, entry) {
+  const qty = entry ? entry.quantity : 1;
+  const val = set.current_value * Math.max(qty, 1);
+  const paid = entry?.purchase_price ? entry.purchase_price * qty : null;
+  const roi = paid ? pct(val, paid) : null;
+  const lines = [
+    `${set.name} (#${set.set_num})`,
+    `Current value: ${fmtMoney(val)}${roi != null ? ` (${roi >= 0 ? "+" : ""}${roi.toFixed(1)}% ROI)` : ""}`,
+    `Theme: ${set.theme || "—"}`,
+  ];
+  const text = lines.join("\n");
+  if (navigator.share) {
+    try { await navigator.share({ title: set.name, text, url: location.href }); return; }
+    catch {}
+  }
+  try {
+    await navigator.clipboard.writeText(text + "\n" + location.href);
+    toast("Copied to clipboard", "success");
+  } catch { toast("Couldn't share", "error"); }
+}
+
 async function addToCollection(setNum, qty = 1) {
   return api("/collection", { method: "POST", body: { set_num: setNum, quantity: qty } });
 }
@@ -269,12 +290,14 @@ const I = {
   build:   `<svg fill="none" viewBox="0 0 20 20" stroke="currentColor" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M14 6l2 2-7 7-3 .5.5-3 7-6.5z M11 4l3 3"/></svg>`,
   rocket:  `<svg fill="none" viewBox="0 0 20 20" stroke="currentColor" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M14 6c2-1 4-1 4-1s0 2-1 4l-1 1-4-4 2 0zM4 16s2-4 4-6l4 4c-2 2-6 4-6 4-1 0-3-1-2-2z"/></svg>`,
   sparkles:`<svg fill="none" viewBox="0 0 20 20" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M10 2l1.4 4.6L16 8l-4.6 1.4L10 14l-1.4-4.6L4 8l4.6-1.4L10 2z"/></svg>`,
+  download:`<svg fill="none" viewBox="0 0 20 20" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M10 3v10M6 13l4 4 4-4M3 17h14"/></svg>`,
+  pencil: `<svg fill="none" viewBox="0 0 20 20" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M13 4l3 3-8 8-3.5.5.5-3.5 8-8zM11 6l3 3"/></svg>`,
 };
 
 // =============================================================
 // Top bar (shared)
 // =============================================================
-function topBar({ search = true } = {}) {
+function topBar({ search = true, extra = "" } = {}) {
   return `
     <div class="top-bar">
       <div class="brand">
@@ -282,6 +305,7 @@ function topBar({ search = true } = {}) {
         <span class="brand-name">Brickvault</span>
       </div>
       <div class="icon-row">
+        ${extra}
         ${search ? `<a href="#/add" class="icon-btn" aria-label="Search">${I.search}</a>` : ""}
       </div>
     </div>
@@ -331,6 +355,8 @@ async function renderPortfolio() {
 function paintPortfolio() {
   const { items, total_value, total_paid } = state.portfolio;
   const sets = items;
+  const minifigCount = sets.filter(s => s.includes_minifigs).length;
+  const setCount     = sets.filter(s => !s.includes_minifigs).length;
   const root = $("#root");
 
   const start = total_paid || total_value * 0.85;
@@ -345,9 +371,27 @@ function paintPortfolio() {
     ? [...sets].sort((a, b) => b.current_value * b.quantity - a.current_value * a.quantity)[0]
     : null;
 
+  // Compute display list: filter by kind then sort
+  let displaySets = [...sets];
+  if (state.filter.kind === "minifigs") displaySets = displaySets.filter(s => s.includes_minifigs);
+  else if (state.filter.kind === "sets") displaySets = displaySets.filter(s => !s.includes_minifigs);
+  const sort = state.filter.sort || "added_desc";
+  if (sort === "value_desc") displaySets.sort((a, b) => b.current_value * b.quantity - a.current_value * a.quantity);
+  else if (sort === "value_asc") displaySets.sort((a, b) => a.current_value * a.quantity - b.current_value * b.quantity);
+  else if (sort === "roi_desc") displaySets.sort((a, b) => pct(b.current_value, b.purchase_price || b.retail_price) - pct(a.current_value, a.purchase_price || a.retail_price));
+  else if (sort === "name_asc") displaySets.sort((a, b) => a.name.localeCompare(b.name));
+
+  // Theme breakdown (top 6 themes by value)
+  const themeMap = {};
+  for (const s of sets) {
+    const t = s.theme || "Other";
+    themeMap[t] = (themeMap[t] || 0) + (s.current_value || 0) * (s.quantity || 1);
+  }
+  const themeGroups = Object.entries(themeMap).sort(([,a],[,b]) => b - a).slice(0, 6);
+
   root.innerHTML = `
     <div class="page">
-      ${topBar()}
+      ${topBar({ extra: sets.length > 0 ? `<button class="icon-btn" id="exportBtn" aria-label="Export collection">${I.download}</button>` : "" })}
       <div class="eyebrow mb-8">Collection</div>
       <h1 class="h-display mb-16">Portfolio</h1>
 
@@ -390,17 +434,38 @@ function paintPortfolio() {
           All <span class="count">${sets.length}</span>
         </button>
         <button class="chip ${state.filter.kind === "sets" ? "active" : ""}" data-filter="sets">
-          Sets <span class="count">${sets.length}</span>
+          Sets <span class="count">${setCount}</span>
         </button>
         <button class="chip ${state.filter.kind === "minifigs" ? "active" : ""}" data-filter="minifigs">
-          Minifigs <span class="count">0</span>
+          Minifigs <span class="count">${minifigCount}</span>
         </button>
+        <select class="sort-pill" id="sortSel" aria-label="Sort by">
+          <option value="added_desc" ${sort === "added_desc" ? "selected" : ""}>Recent</option>
+          <option value="value_desc" ${sort === "value_desc" ? "selected" : ""}>Value ↓</option>
+          <option value="value_asc"  ${sort === "value_asc"  ? "selected" : ""}>Value ↑</option>
+          <option value="roi_desc"   ${sort === "roi_desc"   ? "selected" : ""}>ROI ↓</option>
+          <option value="name_asc"   ${sort === "name_asc"   ? "selected" : ""}>A–Z</option>
+        </select>
       </div>
 
       ${sets.length === 0 ? renderEmptyPortfolio() : `
         <div class="set-list">
-          ${sets.map(setListCardHTML).join("")}
+          ${displaySets.map(setListCardHTML).join("")}
         </div>
+        ${themeGroups.length >= 2 ? `
+          <div class="theme-section">
+            <div class="eyebrow mb-10">By Theme</div>
+            ${themeGroups.map(([theme, value]) => `
+              <div class="theme-row">
+                <span class="theme-lbl">${theme}</span>
+                <div class="theme-bar-wrap">
+                  <div class="theme-bar-fill" style="width:${(value / total_value * 100).toFixed(1)}%"></div>
+                </div>
+                <span class="theme-amt">${fmtMoneyShort(value)}</span>
+              </div>
+            `).join("")}
+          </div>
+        ` : ""}
       `}
     </div>
   `;
@@ -420,6 +485,19 @@ function paintPortfolio() {
     state.filter.kind = b.dataset.filter;
     paintPortfolio();
   }));
+  $("#sortSel")?.addEventListener("change", (e) => {
+    state.filter.sort = e.target.value;
+    paintPortfolio();
+  });
+  $("#exportBtn")?.addEventListener("click", () => {
+    const link = document.createElement("a");
+    link.href = API + "/collection/export";
+    link.download = "";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    toast("Downloading collection…");
+  });
 }
 
 function renderEmptyPortfolio() {
@@ -639,6 +717,25 @@ function paintSetDetail(set, entry) {
             <button class="qty-btn plus">+</button>
           </div>
         </div>
+        ${qty > 0 && entry ? `
+          <div class="card tight price-card" id="priceCard">
+            <div class="price-card-row">
+              <div>
+                <div class="manage-label">Purchase price</div>
+                <div class="manage-val" id="priceDisplay">${entry.purchase_price ? fmtMoney(entry.purchase_price) : '<span class="muted">Not set</span>'}</div>
+              </div>
+              <button class="icon-btn" id="editPriceBtn" aria-label="Edit price">${I.pencil}</button>
+            </div>
+            <div id="priceEditWrap" style="display:none;margin-top:10px">
+              <input type="number" class="price-input" id="priceInput" placeholder="0.00" step="0.01" min="0" value="${entry.purchase_price || ""}">
+              <div class="price-edit-btns">
+                <button class="cancel-sm" id="cancelPriceBtn">Cancel</button>
+                <button class="save-sm" id="savePriceBtn">Save</button>
+              </div>
+            </div>
+            ${entry.added_at ? `<div class="manage-date">Added ${new Date(entry.added_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>` : ""}
+          </div>
+        ` : ""}
         ${qty > 0 ? `<button class="danger-btn" id="removeBtn">Remove from collection</button>` : ""}
       </div>
     </div>
@@ -708,6 +805,33 @@ function paintSetDetail(set, entry) {
       await loadPortfolio();
       toast("Removed from collection", "success");
       location.hash = "#/";
+    } catch (e) { toast(e.message, "error"); }
+  });
+
+  // Share button
+  $$(".detail-top .icon-btn[aria-label='Share']").forEach(btn => {
+    btn.addEventListener("click", () => shareSet(set, entry));
+  });
+
+  // Edit purchase price
+  $("#editPriceBtn")?.addEventListener("click", () => {
+    $("#priceEditWrap").style.display = "block";
+    $("#editPriceBtn").style.display  = "none";
+    $("#priceInput")?.focus();
+  });
+  $("#cancelPriceBtn")?.addEventListener("click", () => {
+    $("#priceEditWrap").style.display = "none";
+    $("#editPriceBtn").style.display  = "";
+  });
+  $("#savePriceBtn")?.addEventListener("click", async () => {
+    const val = parseFloat($("#priceInput")?.value);
+    if (isNaN(val) || val < 0) { toast("Enter a valid price", "error"); return; }
+    try {
+      await api("/collection/" + entry.id, { method: "PATCH", body: { purchase_price: val } });
+      await loadPortfolio();
+      const updated = state.portfolio.items.find(i => i.set_num === set.set_num);
+      paintSetDetail(set, updated);
+      toast("Price updated", "success");
     } catch (e) { toast(e.message, "error"); }
   });
 }
@@ -903,58 +1027,69 @@ function renderPile() {
     <div class="page">
       ${topBar()}
       <div class="eyebrow mb-8">Identify</div>
-      <h1 class="h-display mb-24">Pile Scanner</h1>
+      <h1 class="h-display mb-16">Pile Scanner</h1>
 
       <div class="scan-cta" id="scanCta">
-        <div class="label">AI Vision</div>
-        <h2>Scan your pile</h2>
-        <p>Pour out your bricks. We identify pieces and suggest what you can build.</p>
+        <div class="label">GPT-4o Vision</div>
+        <h2>Photograph a set</h2>
+        <p>Point your camera at a LEGO box, built model, or instruction cover — AI identifies it instantly.</p>
         <div class="arrow">${I.scan}</div>
       </div>
 
+      <div class="pile-tips">
+        <div class="pile-tip"><span class="tip-dot"></span>Works on box art, built models, and instructions</div>
+        <div class="pile-tip"><span class="tip-dot"></span>No barcode needed — visual ID from any angle</div>
+        <div class="pile-tip"><span class="tip-dot"></span>After ID, add to your collection in one tap</div>
+      </div>
+
       <div class="list-card">
-        <a class="list-row" href="#/add">
-          <span class="icon-wrap">${I.build}</span>
+        <button class="list-row" id="scanBarcodeBtn">
+          <span class="icon-wrap">${I.scan}</span>
           <div class="text">
-            <h4>Browse builds</h4>
-            <p>Open-source build ideas with step-by-step instructions</p>
+            <h4>Barcode scan</h4>
+            <p>Auto-detect UPC / EAN barcodes from the box</p>
           </div>
           <span class="chev">${I.chev}</span>
-        </a>
+        </button>
         <a class="list-row" href="#/add">
-          <span class="icon-wrap">${I.sparkles}</span>
+          <span class="icon-wrap">${I.search}</span>
           <div class="text">
-            <h4>Inventory check</h4>
-            <p>See which sets you have ≥ 80% of the pieces for</p>
-          </div>
-          <span class="chev">${I.chev}</span>
-        </a>
-        <a class="list-row" href="#/add">
-          <span class="icon-wrap">${I.rocket}</span>
-          <div class="text">
-            <h4>MOC ideas</h4>
-            <p>AI-generated original models tailored to your pile</p>
+            <h4>Search catalog</h4>
+            <p>Browse or search by name, number, or theme</p>
           </div>
           <span class="chev">${I.chev}</span>
         </a>
       </div>
-
-      <p class="muted text-xs text-center mt-24">
-        Beta · piece-level vision rolls out next quarter
-      </p>
     </div>
   `;
-  $("#scanCta").addEventListener("click", openScan);
+  // Photo mode scan
+  $("#scanCta").addEventListener("click", () => {
+    state.camera.mode = "photo";
+    openScan();
+  });
+  // Barcode mode scan
+  document.getElementById("scanBarcodeBtn")?.addEventListener("click", () => {
+    state.camera.mode = "barcode";
+    openScan();
+  });
 }
 
 // =============================================================
 // Blind Bag page
 // =============================================================
 const BLIND_SAMPLE = [
-  { name: "Mr. Gold",          series: "Minifigures",   rarity: "legendary", value: 1450,  image_url: "https://images.brickset.com/sets/large/col325-1.jpg" },
-  { name: "Boba Fett",         series: "Star Wars",     rarity: "rare",      value: 48,    image_url: "https://images.brickset.com/sets/large/sw0908-1.jpg" },
-  { name: "Mariachi",          series: "Minifigures",   rarity: "uncommon",  value: 8.5,   image_url: "https://images.brickset.com/sets/large/col265-1.jpg" },
-  { name: "Golden Master Wu",  series: "Ninjago",       rarity: "rare",      value: 32,    image_url: "https://images.brickset.com/sets/large/njo493-1.jpg" },
+  { name: "Mr. Gold",           series: "Minifigures",   rarity: "legendary", value: 1450, image_url: "https://images.brickset.com/sets/large/col325-1.jpg" },
+  { name: "Boba Fett",          series: "Star Wars",     rarity: "rare",      value: 48,   image_url: "https://images.brickset.com/sets/large/sw0908-1.jpg" },
+  { name: "Mariachi",           series: "Minifigures",   rarity: "uncommon",  value: 8.5,  image_url: "https://images.brickset.com/sets/large/col265-1.jpg" },
+  { name: "Golden Master Wu",   series: "Ninjago",       rarity: "rare",      value: 32,   image_url: "https://images.brickset.com/sets/large/njo493-1.jpg" },
+  { name: "Gingerbread Man",    series: "Minifigures",   rarity: "uncommon",  value: 12,   image_url: "https://images.brickset.com/sets/large/col359-1.jpg" },
+  { name: "Hermione Granger",   series: "Harry Potter",  rarity: "rare",      value: 22,   image_url: "https://images.brickset.com/sets/large/hp110-1.jpg" },
+  { name: "Viking",             series: "Minifigures",   rarity: "common",    value: 6,    image_url: "https://images.brickset.com/sets/large/col050-1.jpg" },
+  { name: "Space Police",       series: "Minifigures",   rarity: "common",    value: 5,    image_url: "https://images.brickset.com/sets/large/col080-1.jpg" },
+  { name: "Cole (Dragon)",      series: "Ninjago",       rarity: "uncommon",  value: 14,   image_url: "https://images.brickset.com/sets/large/njo388-1.jpg" },
+  { name: "Han Solo",           series: "Star Wars",     rarity: "uncommon",  value: 18,   image_url: "https://images.brickset.com/sets/large/sw0557-1.jpg" },
+  { name: "Clockwork Robot",    series: "Minifigures",   rarity: "rare",      value: 38,   image_url: "https://images.brickset.com/sets/large/col176-1.jpg" },
+  { name: "Yoda",               series: "Star Wars",     rarity: "rare",      value: 55,   image_url: "https://images.brickset.com/sets/large/sw1113-1.jpg" },
 ];
 
 function renderBlind() {
@@ -1144,9 +1279,17 @@ async function onBarcode(code) {
       location.hash = "#/set/" + encodeURIComponent(r.set.set_num);
       return;
     }
-    // barcode didn't resolve — try photo of the barcode as fallback
+    // barcode didn't resolve — offer photo mode and text search fallback
     $("#scanHint").textContent = "Barcode not in catalog";
-    $("#scanSub").textContent  = "Try Photo mode to identify the box visually";
+    const sub = $("#scanSub");
+    if (sub) {
+      sub.textContent = "";
+      sub.innerHTML = `Switch to Photo mode to ID the box, or <button class="scan-text-link" id="barcodeSearchBtn">search by name →</button>`;
+      document.getElementById("barcodeSearchBtn")?.addEventListener("click", () => {
+        closeScan();
+        location.hash = "#/add";
+      });
+    }
   } catch (e) {
     $("#scanHint").textContent = "Lookup failed";
     $("#scanSub").textContent  = e.message;

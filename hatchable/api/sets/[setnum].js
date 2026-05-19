@@ -14,7 +14,7 @@ import { aiValuation } from "../_lib/valuation.js";
 export const access = "viewer";
 export const methods = ["GET"];
 
-const CACHE_DAYS = 30;
+const CACHE_DAYS = 7;
 
 export default async function (req, res) {
   const setNum = req.params.setnum;

@@ -8,8 +8,8 @@ description = "A premium LEGO portfolio tracker — catalog from Rebrickable, AI
 # their key once at the account level.
 [ai]
 required    = true
-providers   = ["anthropic"]
-description = "Claude is used for two things: identifying LEGO sets from camera photos, and estimating market value + price forecasts from each set's properties."
+pin         = "openai"
+description = "GPT-4o identifies LEGO sets from camera photos; GPT-4o-mini estimates market values and price forecasts."
 
 # Optional. With a Rebrickable key (free at rebrickable.com/api) the
 # catalog expands from 30 curated sets to the entire LEGO universe

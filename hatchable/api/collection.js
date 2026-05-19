@@ -37,16 +37,18 @@ export default async function (req, res) {
     );
 
     return res.json({
-      items: rows,
-      total_value: Number(totalValue.toFixed(2)),
-      total_paid:  Number(totalPaid.toFixed(2)),
-      count:       rows.length,
+      items:         rows,
+      total_value:   Number(totalValue.toFixed(2)),
+      total_paid:    Number(totalPaid.toFixed(2)),
+      count:         rows.length,
+      minifig_count: rows.filter(r => r.includes_minifigs).length,
     });
   }
 
   // POST -- add or upsert quantity / condition for a set
   const { set_num, quantity = 1, condition = "new", purchase_price = null, notes = "" } = req.body || {};
   if (!set_num) return res.status(400).json({ error: "set_num required" });
+  if (quantity < 1) return res.status(400).json({ error: "quantity must be at least 1" });
 
   const setCheck = await db.query("SELECT 1 FROM lego_sets WHERE set_num = $1", [set_num]);
   if (setCheck.rows.length === 0) {
