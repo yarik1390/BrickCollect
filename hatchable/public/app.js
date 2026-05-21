@@ -367,10 +367,6 @@ function paintPortfolio() {
   const deltaSign = delta >= 0 ? "up" : "down";
 
   // top earner (for the small meta line)
-  const topEarner = sets.length
-    ? [...sets].sort((a, b) => b.current_value * b.quantity - a.current_value * a.quantity)[0]
-    : null;
-
   // Compute display list: filter by kind then sort
   let displaySets = [...sets];
   if (state.filter.kind === "minifigs") displaySets = displaySets.filter(s => s.includes_minifigs);
@@ -520,35 +516,6 @@ function renderEmptyPortfolio() {
       <p>Scan a box, search the catalog, or pick a set to start tracking value, history, and forecasts.</p>
       <a href="#/add" class="add-btn">${I.plus} Add your first set</a>
     </div>
-  `;
-}
-
-function setCardHTML(item) {
-  const v = item.current_value * item.quantity;
-  const paid = (item.purchase_price || item.retail_price) * item.quantity;
-  const d = pct(v, paid);
-  const dSign = d >= 0 ? "up" : "down";
-  return `
-    <a class="set-card" href="#/set/${encodeURIComponent(item.set_num)}">
-      <div class="set-img-wrap">
-        <img src="${item.image_url}" alt="${item.name}" loading="lazy"
-             onerror="this.style.opacity=0.15">
-        ${item.quantity > 1 ? `<span class="qty-badge">×${item.quantity}</span>` : ""}
-      </div>
-      <div class="set-body">
-        <div class="set-name">${item.name}</div>
-        <div class="set-value">${fmtMoney(v)}</div>
-        <div class="set-meta">
-          <span>#${item.set_num}</span>
-          <span class="sep">·</span>
-          <span>${item.theme || "—"}</span>
-        </div>
-        ${paid ? `<div class="set-delta ${dSign}">
-          ${dSign === "up" ? I.trend : I.trendDn}
-          ${d >= 0 ? "+" : ""}${d.toFixed(1)}%
-        </div>` : ""}
-      </div>
-    </a>
   `;
 }
 
@@ -1182,7 +1149,7 @@ function applyScanMode() {
   $("#scanCapture").style.display = isPhoto ? "flex" : "none";
   $("#scanHint").textContent  = isPhoto ? "Point at the set" : "Point at a barcode";
   $("#scanSub").textContent   = isPhoto
-    ? "Tap the shutter to identify with Claude vision"
+    ? "Tap the shutter to identify with GPT-4o vision"
     : (("BarcodeDetector" in window)
         ? "Auto-detects most UPC and EAN codes"
         : "Or switch to Photo mode — your browser doesn't support live barcode reading");
@@ -1314,7 +1281,7 @@ async function capturePhoto() {
   const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
 
   $("#scanHint").textContent = "Identifying…";
-  $("#scanSub").textContent  = "Claude is looking at your photo";
+  $("#scanSub").textContent  = "GPT-4o is looking at your photo";
   $("#scanCapture").style.opacity = "0.4";
   $("#scanCapture").style.pointerEvents = "none";
 
