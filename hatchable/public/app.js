@@ -924,19 +924,29 @@ function paintCatalogResults() {
 
   wrap.innerHTML = `
     <div class="results-count">Showing ${start + 1}–${Math.min(start + pageSize, allSets.length)} of ${allSets.length} sets</div>
-    ${sets.map(s => `
-      <div class="add-result ${ownedSet.has(s.set_num) ? "owned" : ""}" data-set="${encodeURIComponent(s.set_num)}">
-        <img src="${s.image_url}" alt="${s.name}" loading="lazy" onerror="this.style.opacity=0.15">
-        <div class="info">
-          <h4>${s.name}</h4>
-          <div class="meta">#${s.set_num} · ${s.theme || "—"}${s.year ? " · " + s.year : ""}</div>
-          <div class="price">${fmtMoney(s.current_value || 0)}</div>
-        </div>
-        <button class="check" data-action="${ownedSet.has(s.set_num) ? "view" : "add"}" aria-label="${ownedSet.has(s.set_num) ? "Owned" : "Add"}">
-          ${ownedSet.has(s.set_num) ? I.check : I.plus}
-        </button>
-      </div>
-    `).join("")}
+    <div class="results-grid">
+      ${sets.map(s => {
+        const owned = ownedSet.has(s.set_num);
+        return `
+          <div class="add-result ${owned ? "owned" : ""}" data-set="${encodeURIComponent(s.set_num)}">
+            <div class="add-result-img">
+              <img src="${s.image_url}" alt="${s.name}" loading="lazy" onerror="this.style.opacity=0.12">
+              ${owned ? `<span class="owned-badge">${I.check}</span>` : ""}
+            </div>
+            <div class="add-result-body">
+              <div class="add-result-name">${s.name}</div>
+              <div class="add-result-meta">#${s.set_num}${s.theme ? " · " + s.theme : ""}${s.year ? " · " + s.year : ""}</div>
+              <div class="add-result-foot">
+                <span class="add-result-price">${fmtMoney(s.current_value || 0)}</span>
+                <button class="add-result-btn ${owned ? "owned" : ""}" data-action="${owned ? "view" : "add"}" aria-label="${owned ? "Owned" : "Add"}">
+                  ${owned ? I.check : I.plus}
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("")}
+    </div>
     ${totalPages > 1 ? `
       <div class="pagination-bar">
         <button class="page-btn" id="prevPage" ${page <= 1 ? "disabled" : ""}>‹</button>
@@ -946,10 +956,10 @@ function paintCatalogResults() {
     ` : ""}
   `;
 
-  $$(".add-result").forEach(el => {
+  $$("#results .add-result").forEach(el => {
     el.addEventListener("click", async (e) => {
       const setNum = decodeURIComponent(el.dataset.set);
-      const btn = e.target.closest(".check");
+      const btn = e.target.closest(".add-result-btn");
       if (btn && btn.dataset.action === "add") {
         e.stopPropagation();
         await addQuick(setNum, el);
@@ -976,9 +986,19 @@ async function addQuick(setNum, rowEl) {
     await addToCollection(setNum, 1);
     await loadPortfolio();
     rowEl.classList.add("owned");
-    const check = rowEl.querySelector(".check");
-    check.innerHTML = I.check;
-    check.dataset.action = "view";
+    const btn = rowEl.querySelector(".add-result-btn");
+    if (btn) {
+      btn.innerHTML = I.check;
+      btn.dataset.action = "view";
+      btn.classList.add("owned");
+    }
+    const imgWrap = rowEl.querySelector(".add-result-img");
+    if (imgWrap && !imgWrap.querySelector(".owned-badge")) {
+      const badge = document.createElement("span");
+      badge.className = "owned-badge";
+      badge.innerHTML = I.check;
+      imgWrap.appendChild(badge);
+    }
     toast("Added to collection", "success");
   } catch (e) {
     toast(e.message, "error");
@@ -1084,7 +1104,7 @@ function renderBlind() {
 
       <div class="grid">
         ${sample.map(f => `
-          <div class="fig-card">
+          <div class="fig-card fig-${f.rarity}">
             <span class="rarity rarity-${f.rarity}">${f.rarity}</span>
             <img src="${f.image_url}" alt="${f.name}" onerror="this.style.opacity=0.2">
             <div class="name">${f.name}</div>
