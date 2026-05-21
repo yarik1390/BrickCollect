@@ -366,7 +366,6 @@ function paintPortfolio() {
   const deltaPct = total_paid ? pct(total_value, total_paid) : 0;
   const deltaSign = delta >= 0 ? "up" : "down";
 
-  // top earner (for the small meta line)
   // Compute display list: filter by kind then sort
   let displaySets = [...sets];
   if (state.filter.kind === "minifigs") displaySets = displaySets.filter(s => s.includes_minifigs);
