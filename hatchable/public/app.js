@@ -604,25 +604,24 @@ function paintSetDetail(set, entry) {
 
   root.innerHTML = `
     <div class="page no-pad-top">
-      <div class="detail-top">
-        <button class="icon-btn" id="closeBtn" aria-label="Close">${I.close}</button>
-        <span class="detail-top-title" id="detailTopTitle">${set.name}</span>
-        <div class="icon-row">
-          <button class="icon-btn" aria-label="Share">${I.share}</button>
-          <button class="icon-btn" aria-label="Save">${I.heart}</button>
-        </div>
-      </div>
-
       <div class="detail-hero">
-        <img src="${set.image_url}" alt="${set.name}" onerror="this.style.opacity=0.25">
-      </div>
-
-      <div class="detail-meta">
-        <h1 class="detail-title">${set.name}</h1>
-        <div class="pill-row">
-          <span class="pill">${I.tag}<span>#${set.set_num}</span></span>
-          ${set.includes_minifigs ? `<span class="pill warm">${I.box}<span>${set.minifigs} minifigs</span></span>` : ""}
-          ${set.retired ? `<span class="pill cool">Retired</span>` : ""}
+        <div class="detail-hero-bg" style="background-image:url('${set.image_url}')"></div>
+        <div class="detail-top">
+          <button class="icon-btn ghost" id="closeBtn" aria-label="Close">${I.close}</button>
+          <span class="detail-top-title" id="detailTopTitle">${set.name}</span>
+          <div class="icon-row">
+            <button class="icon-btn ghost" aria-label="Share">${I.share}</button>
+            <button class="icon-btn ghost" aria-label="Save">${I.heart}</button>
+          </div>
+        </div>
+        <img src="${set.image_url}" alt="${set.name}" onerror="this.style.opacity=0.1">
+        <div class="detail-hero-scrim">
+          <h1 class="detail-title">${set.name}</h1>
+          <div class="pill-row">
+            <span class="pill">${I.tag}<span>#${set.set_num}</span></span>
+            ${set.includes_minifigs ? `<span class="pill warm">${I.box}<span>${set.minifigs} minifigs</span></span>` : ""}
+            ${set.retired ? `<span class="pill cool">Retired</span>` : ""}
+          </div>
         </div>
       </div>
 
@@ -688,7 +687,10 @@ function paintSetDetail(set, entry) {
             <div class="price-card-row">
               <div>
                 <div class="manage-label">Purchase price</div>
-                <div class="manage-val" id="priceDisplay">${entry.purchase_price ? fmtMoney(entry.purchase_price) : '<span class="muted">Not set</span>'}</div>
+                <div class="manage-val" id="priceDisplay">
+                  ${entry.purchase_price ? fmtMoney(entry.purchase_price) : '<span class="muted">Not set</span>'}
+                  ${entry.added_at ? `<span class="price-date">· ${new Date(entry.added_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>` : ""}
+                </div>
               </div>
               <button class="icon-btn" id="editPriceBtn" aria-label="Edit price">${I.pencil}</button>
             </div>
@@ -699,7 +701,6 @@ function paintSetDetail(set, entry) {
                 <button class="save-sm" id="savePriceBtn">Save</button>
               </div>
             </div>
-            ${entry.added_at ? `<div class="manage-date">Added ${new Date(entry.added_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>` : ""}
           </div>
         ` : ""}
         ${qty > 0 ? `<button class="danger-btn" id="removeBtn">Remove from collection</button>` : ""}
@@ -1106,7 +1107,9 @@ function renderBlind() {
         ${sample.map(f => `
           <div class="fig-card fig-${f.rarity}">
             <span class="rarity rarity-${f.rarity}">${f.rarity}</span>
-            <img src="${f.image_url}" alt="${f.name}" onerror="this.style.opacity=0.2">
+            <div class="fig-img-wrap">
+              <img src="${f.image_url}" alt="${f.name}" onerror="this.style.opacity=0">
+            </div>
             <div class="name">${f.name}</div>
             <div class="muted text-xs mb-4">${f.series}</div>
             <div class="value">${fmtMoney(f.value)}</div>
@@ -1127,9 +1130,11 @@ function renderBlind() {
       const filtered = label === "All series" ? sample : sample.filter(f => f.series === label);
       const grid = $(".grid");
       if (grid) grid.innerHTML = filtered.map(f => `
-        <div class="fig-card">
+        <div class="fig-card fig-${f.rarity}">
           <span class="rarity rarity-${f.rarity}">${f.rarity}</span>
-          <img src="${f.image_url}" alt="${f.name}" onerror="this.style.opacity=0.2">
+          <div class="fig-img-wrap">
+            <img src="${f.image_url}" alt="${f.name}" onerror="this.style.opacity=0">
+          </div>
           <div class="name">${f.name}</div>
           <div class="muted text-xs mb-4">${f.series}</div>
           <div class="value">${fmtMoney(f.value)}</div>

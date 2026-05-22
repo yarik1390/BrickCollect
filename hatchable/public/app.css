@@ -1127,21 +1127,25 @@ img { display: block; max-width: 100%; }
   box-shadow: var(--shadow-2);
 }
 .fig-card:hover { transform: translate(-2px,-2px); box-shadow: var(--shadow-3); }
-.fig-card img {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: contain;
-  background: var(--surface-2);
+.fig-img-wrap {
+  width: 100%; aspect-ratio: 1;
   border-radius: var(--r-1);
   margin-bottom: 10px;
+  overflow: hidden;
+  background: var(--surface-2);
+  display: flex; align-items: center; justify-content: center;
+}
+.fig-img-wrap img {
+  width: 100%; height: 100%;
+  object-fit: contain;
   padding: 10px;
   transition: transform var(--dur) var(--ease);
 }
-.fig-card:hover img { transform: scale(1.05); }
-/* Rarity-tinted image backgrounds */
-.fig-uncommon img  { background: var(--up-pale); }
-.fig-rare img      { background: #FBE3DA; }
-.fig-legendary img { background: var(--accent-bg); }
+.fig-card:hover .fig-img-wrap img { transform: scale(1.05); }
+/* Rarity-tinted image zone backgrounds — visible even when image fails */
+.fig-uncommon .fig-img-wrap { background: var(--up-pale); }
+.fig-rare .fig-img-wrap     { background: #FBE3DA; }
+.fig-legendary .fig-img-wrap { background: var(--accent-bg); }
 .fig-card .name {
   font-weight: 600;
   font-size: 13px;
@@ -1566,29 +1570,71 @@ img { display: block; max-width: 100%; }
 }
 
 /* ============================================================
-   Set detail — compact hero + sticky tabs
+   Set detail — cinematic full-bleed hero
    ============================================================ */
 .detail-hero {
   margin: 0 -22px;
-  background: linear-gradient(160deg, var(--surface) 0%, var(--surface-2) 100%);
+  height: 340px;
+  position: relative;
+  overflow: hidden;
   display: flex; align-items: center; justify-content: center;
-  padding: 24px; max-height: 220px; height: auto; overflow: hidden;
-  border-bottom: 2px solid var(--line-soft);
 }
-.detail-hero img { max-height: 172px; max-width: 100%; object-fit: contain; }
-.detail-top { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; }
-.detail-meta { margin-top: 16px; }
+.detail-hero-bg {
+  position: absolute; inset: 0;
+  background-size: cover; background-position: center;
+  filter: blur(26px) brightness(0.55) saturate(1.7);
+  transform: scale(1.15);
+  z-index: 0;
+}
+.detail-hero > img {
+  position: relative; z-index: 1;
+  max-height: 234px; max-width: 82%;
+  object-fit: contain;
+  filter: drop-shadow(0 12px 36px rgba(0,0,0,0.55));
+}
+.detail-hero-scrim {
+  position: absolute; bottom: 0; left: 0; right: 0; z-index: 2;
+  background: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.82) 100%);
+  padding: 60px 22px 20px;
+}
+.detail-hero-scrim .detail-title {
+  color: #fff; font-size: 22px; line-height: 1.18; margin-bottom: 10px;
+}
+.detail-hero-scrim .pill {
+  background: rgba(255,255,255,0.15);
+  border-color: rgba(255,255,255,0.30);
+  color: rgba(255,255,255,0.92);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.detail-top {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 3;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: calc(48px + env(safe-area-inset-top, 0px)) 18px 18px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.42) 0%, transparent 100%);
+}
+.icon-btn.ghost {
+  background: rgba(255,255,255,0.18);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1.5px solid rgba(255,255,255,0.28);
+  color: #fff;
+  box-shadow: none;
+}
+.icon-btn.ghost:hover { background: rgba(255,255,255,0.28); transform: none; box-shadow: none; }
+.detail-meta { display: none; }
 .detail-top-title {
   font-family: var(--serif); font-weight: 500; font-size: 15px;
   letter-spacing: -0.008em; flex: 1; text-align: center;
   opacity: 0; transition: opacity var(--dur) var(--ease);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   padding: 0 8px; pointer-events: none;
+  color: #fff;
 }
 .detail-top-title.show { opacity: 1; }
 .detail-tabs {
   display: flex; border-bottom: 2px solid var(--line);
-  margin: 12px -22px 0; padding: 0 22px;
+  margin: 0 -22px; padding: 0 22px;
   position: sticky; top: 0; background: var(--bg); z-index: 10;
 }
 .detail-tab {
@@ -1831,6 +1877,14 @@ img { display: block; max-width: 100%; }
   font-size: 10.5px;
   color: var(--ink-faint);
   margin-top: 8px;
+}
+.price-date {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--ink-faint);
+  margin-left: 4px;
+  letter-spacing: 0;
 }
 .price-input {
   width: 100%;
