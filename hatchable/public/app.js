@@ -16,6 +16,9 @@ const state = {
   toastTimer: null,
   detail: { tab: "info" },
   pwa: { deferredPrompt: null },
+  wishlist: [],
+  wishlistAlerts: [],
+  portfolioHistory: null,
   // camera
   camera: {
     stream: null,
@@ -221,6 +224,15 @@ async function api(path, opts = {}) {
 }
 
 async function loadPortfolio() { state.portfolio = await api("/collection"); }
+async function loadWishlist() {
+  try {
+    const r = await api("/wishlist");
+    state.wishlist = r.wishlist || [];
+    state.wishlistAlerts = r.unread_alerts || [];
+  } catch { state.wishlist = []; state.wishlistAlerts = []; }
+}
+function isWishlisted(setNum) { return (state.wishlist || []).some(w => w.set_num === setNum); }
+function wishlistEntryFor(setNum) { return (state.wishlist || []).find(w => w.set_num === setNum); }
 
 async function loadCatalog(q = "", theme = null) {
   const params = new URLSearchParams();
@@ -338,7 +350,11 @@ async function renderPortfolio() {
   `;
 
   try {
-    await loadPortfolio();
+    await Promise.all([
+      loadPortfolio(),
+      loadWishlist(),
+      api("/collection/history?days=90").then(r => { state.portfolioHistory = r.snapshots || []; }).catch(() => {}),
+    ]);
   } catch (e) {
     root.innerHTML = `
       <div class="page">${topBar()}
@@ -361,10 +377,17 @@ function paintPortfolio() {
 
   const start = total_paid || total_value * 0.85;
   const isEmpty = total_value === 0;
-  const points = isEmpty ? null : buildHistory("portfolio:" + items.length, start, total_value, 30);
-  const delta = total_value - start;
-  const deltaPct = total_paid ? pct(total_value, total_paid) : 0;
+  const snapshots = state.portfolioHistory || [];
+  // Use real history if we have ≥2 data points, else synthetic fallback
+  const points = isEmpty ? null
+    : snapshots.length >= 2
+      ? snapshots.map(s => s.total_value)
+      : buildHistory("portfolio:" + items.length, start, total_value, 30);
+  const histStart = snapshots.length >= 2 ? snapshots[0].total_value : start;
+  const delta = total_value - histStart;
+  const deltaPct = total_paid ? pct(total_value, total_paid) : pct(total_value, histStart);
   const deltaSign = delta >= 0 ? "up" : "down";
+  const alertCount = (state.wishlistAlerts || []).length;
 
   // Compute display list: filter by kind then sort
   let displaySets = [...sets];
@@ -386,7 +409,12 @@ function paintPortfolio() {
 
   root.innerHTML = `
     <div class="page">
-      ${topBar({ extra: sets.length > 0 ? `<button class="icon-btn" id="exportBtn" aria-label="Export collection">${I.download}</button>` : "" })}
+      ${topBar({ extra: `
+        ${alertCount > 0 ? `<button class="icon-btn" id="alertsBtn" aria-label="${alertCount} wishlist alert${alertCount > 1 ? 's' : ''}" style="position:relative">
+          ${I.heart}<span class="wishlist-badge">${alertCount}</span>
+        </button>` : ""}
+        ${sets.length > 0 ? `<button class="icon-btn" id="exportBtn" aria-label="Export collection">${I.download}</button>` : ""}
+      `.trim() })}
       <div class="eyebrow mb-8">Collection</div>
       <h1 class="h-display mb-16">Portfolio</h1>
 
@@ -493,6 +521,17 @@ function paintPortfolio() {
     link.remove();
     toast("Downloading collection…");
   });
+
+  $("#alertsBtn")?.addEventListener("click", async () => {
+    const alerts = state.wishlistAlerts || [];
+    if (!alerts.length) return;
+    const names = alerts.map(a => `${a.set_name} — now ${fmtMoney(a.current_value)} (target ${fmtMoney(a.target_price)})`).join("\n");
+    alert("Wishlist alerts:\n\n" + names);
+    // Mark all as read
+    await Promise.all(alerts.map(a => api("/wishlist/" + a.id, { method: "POST" }).catch(() => {})));
+    state.wishlistAlerts = [];
+    document.querySelector("#alertsBtn")?.remove();
+  });
 }
 
 function renderEmptyPortfolio() {
@@ -569,7 +608,10 @@ async function renderSetDetail(setNum) {
   try {
     const r = await getSet(setNum);
     set = r.set;
-    if (!state.portfolio) await loadPortfolio();
+    await Promise.all([
+      state.portfolio ? Promise.resolve() : loadPortfolio(),
+      state.wishlist.length === 0 ? loadWishlist() : Promise.resolve(),
+    ]);
     entry = state.portfolio.items.find(i => i.set_num === set.set_num);
   } catch (e) {
     root.innerHTML = `
@@ -601,6 +643,41 @@ function paintSetDetail(set, entry) {
 
   const tab = state.detail.tab;
   const panelId = { info: "tabInfo", forecast: "tabForecast", manage: "tabManage" };
+  const wishlisted = isWishlisted(set.set_num);
+
+  // Sell-now calculator (shown when item is in collection with a purchase price)
+  let sellSection = "";
+  if (qty > 0 && entry?.purchase_price) {
+    const fee = 0.10;
+    const netProceeds = set.current_value * (1 - fee);
+    const breakEven = entry.purchase_price / (1 - fee);
+    const profitLoss = netProceeds - entry.purchase_price;
+    const plSign = profitLoss >= 0 ? "up" : "down";
+    let roiLine = "";
+    if (entry.purchased_at) {
+      const years = (Date.now() - new Date(entry.purchased_at).getTime()) / (365.25 * 24 * 3600 * 1000);
+      if (years >= 0.08 && entry.purchase_price > 0) {
+        const annRoi = (Math.pow(set.current_value / entry.purchase_price, 1 / years) - 1) * 100;
+        const daysHeld = Math.round(years * 365.25);
+        roiLine = `
+          <div class="sell-row"><span>Held</span><span class="mono">${daysHeld} days</span></div>
+          <div class="sell-row ${annRoi >= 0 ? "up" : "down"}">
+            <span>Annualized ROI</span>
+            <span class="mono">${annRoi >= 0 ? "+" : ""}${annRoi.toFixed(1)}%/yr</span>
+          </div>`;
+      }
+    }
+    sellSection = `
+      <div class="card tight sell-card">
+        <h4>Sell analysis · 10% fee</h4>
+        <div class="sell-grid">
+          <div class="sell-row"><span>Net after fees</span><span class="mono">${fmtMoney(netProceeds)}</span></div>
+          <div class="sell-row ${plSign}"><span>Profit / loss</span><span class="mono">${profitLoss >= 0 ? "+" : ""}${fmtMoney(profitLoss)}</span></div>
+          <div class="sell-row"><span>Break-even sell price</span><span class="mono">${fmtMoney(breakEven)}</span></div>
+          ${roiLine}
+        </div>
+      </div>`;
+  }
 
   root.innerHTML = `
     <div class="page no-pad-top">
@@ -611,7 +688,7 @@ function paintSetDetail(set, entry) {
           <span class="detail-top-title" id="detailTopTitle">${set.name}</span>
           <div class="icon-row">
             <button class="icon-btn ghost" aria-label="Share">${I.share}</button>
-            <button class="icon-btn ghost" aria-label="Save">${I.heart}</button>
+            <button class="icon-btn ghost heart-btn ${wishlisted ? "wishlisted" : ""}" id="wishlistBtn" aria-label="${wishlisted ? "Remove from wishlist" : "Add to wishlist"}">${I.heart}</button>
           </div>
         </div>
         <img src="${set.image_url}" alt="${set.name}" onerror="this.style.opacity=0.1">
@@ -704,6 +781,7 @@ function paintSetDetail(set, entry) {
           </div>
         ` : ""}
         ${qty > 0 ? `<button class="danger-btn" id="removeBtn">Remove from collection</button>` : ""}
+        ${sellSection}
       </div>
     </div>
   `;
@@ -778,6 +856,27 @@ function paintSetDetail(set, entry) {
   // Share button
   $$(".detail-top .icon-btn[aria-label='Share']").forEach(btn => {
     btn.addEventListener("click", () => shareSet(set, entry));
+  });
+
+  // Wishlist toggle
+  $("#wishlistBtn")?.addEventListener("click", async () => {
+    try {
+      const btn = $("#wishlistBtn");
+      if (isWishlisted(set.set_num)) {
+        const w = wishlistEntryFor(set.set_num);
+        if (w) await api("/wishlist/" + w.id, { method: "DELETE" });
+        state.wishlist = state.wishlist.filter(x => x.set_num !== set.set_num);
+        btn.classList.remove("wishlisted");
+        btn.setAttribute("aria-label", "Add to wishlist");
+        toast("Removed from wishlist");
+      } else {
+        const r = await api("/wishlist", { method: "POST", body: { set_num: set.set_num } });
+        state.wishlist.push({ ...r.entry, set_num: set.set_num });
+        btn.classList.add("wishlisted");
+        btn.setAttribute("aria-label", "Remove from wishlist");
+        toast("Added to wishlist", "success");
+      }
+    } catch (e) { toast(e.message, "error"); }
   });
 
   // Edit purchase price
@@ -923,7 +1022,9 @@ function paintCatalogResults() {
     return;
   }
 
+  const incomplete = state.catalog?.search_incomplete;
   wrap.innerHTML = `
+    ${incomplete ? `<div class="search-incomplete-banner">⚠ Live catalog search unavailable — showing local results only.</div>` : ""}
     <div class="results-count">Showing ${start + 1}–${Math.min(start + pageSize, allSets.length)} of ${allSets.length} sets</div>
     <div class="results-grid">
       ${sets.map(s => {

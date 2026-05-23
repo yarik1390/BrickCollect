@@ -20,3 +20,19 @@ key         = "REBRICKABLE_API_KEY"
 required    = false
 expose      = true
 description = "Rebrickable API key. Free signup at rebrickable.com/api — unlocks the full LEGO catalog (~20,000 sets). Optional; the app uses a curated 30-set catalog when blank."
+
+# ── Background jobs ──────────────────────────────────────────────
+[[cron]]
+route    = "/api/jobs/valuate-sets"
+schedule = "0 * * * *"
+name     = "valuate-sets"
+
+[[cron]]
+route    = "/api/jobs/snapshot-portfolios"
+schedule = "0 2 * * *"
+name     = "snapshot-portfolios"
+
+[[cron]]
+route    = "/api/jobs/wishlist-alerts"
+schedule = "0 8 * * *"
+name     = "wishlist-alerts"

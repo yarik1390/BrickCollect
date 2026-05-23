@@ -1975,6 +1975,52 @@ img { display: block; max-width: 100%; }
 }
 .skip-link:focus { top: 0; }
 
+/* ── Image placeholder ─────────────────────────────────────── */
+img[src=""]:not([alt=""]),
+img:not([src]) {
+  background: var(--surface-3);
+  min-height: 80px;
+}
+
+/* ── Sell analysis card ────────────────────────────────────── */
+.sell-card h4 { margin: 0 0 12px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-mute); }
+.sell-grid { display: grid; gap: 10px; }
+.sell-row { display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+.sell-row .mono { font-family: var(--mono); font-weight: 500; }
+.sell-row.up .mono  { color: var(--green); }
+.sell-row.down .mono { color: var(--red); }
+
+/* ── Wishlist badge on heart btn ───────────────────────────── */
+.heart-btn.wishlisted { color: var(--lego-red); }
+.wishlist-badge {
+  position: absolute;
+  top: -4px; right: -4px;
+  min-width: 16px; height: 16px;
+  padding: 0 4px;
+  background: var(--lego-red);
+  color: #fff;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+
+/* ── Search incomplete warning ─────────────────────────────── */
+.search-incomplete-banner {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px;
+  margin: 8px 0;
+  background: var(--surface-2);
+  border-left: 3px solid var(--lego-yellow);
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--ink-mute);
+}
+
+/* ── Portfolio history sparkline ───────────────────────────── */
+.history-chart { margin-top: 8px; }
+
 /* ── Offline banner ────────────────────────────────────────── */
 .offline-banner {
   display: none;

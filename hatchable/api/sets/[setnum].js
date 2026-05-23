@@ -2,9 +2,9 @@
 // GET /api/sets/:setnum
 // Returns the full detail row for one set.
 // Layered fetch strategy:
-//   1) cache hit, fresh AI valuation → return immediately
-//   2) cache hit, formula_bulk valuation → upgrade to AI in place
-//   3) cache miss / stale → fetch from Rebrickable + AI-valuate
+//   1) fresh AI valuation, not expired  → return immediately
+//   2) formula_bulk OR expired AI       → upgrade/refresh valuation
+//   3) cache miss / stale data          → fetch from Rebrickable + AI-valuate
 // =============================================================
 
 import { db } from "hatchable";
@@ -25,19 +25,17 @@ export default async function (req, res) {
 
   const cached = await readCache(setNum);
 
-  // 1) Fresh enough → done
+  // 1) Fresh enough and valuation is current → done
   if (cached && !needsDataRefresh(cached) && !needsValuationUpgrade(cached)) {
     return res.json({ set: cached, source: cached.source || "cache" });
   }
 
-  // 2) We have all the catalog fields but the valuation was the
-  //    cheap formula one from the bulk import. Upgrade just the
-  //    valuation with Claude, keep the data. No Rebrickable call.
+  // 2) Valuation needs upgrade (formula_bulk or expired AI)
   if (cached && needsValuationUpgrade(cached) && !needsDataRefresh(cached)) {
     const userId = getCallerId(req);
     const ok = await checkRateLimit(userId || "anon", "set-valuation", VALUATION_LIMIT);
     if (!ok) {
-      // Serve the formula valuation rather than erroring — still useful.
+      // Serve existing valuation rather than erroring
       return res.json({ set: cached, source: "cache", rate_limited: true });
     }
     try {
@@ -47,7 +45,9 @@ export default async function (req, res) {
             SET retail_price=$1, current_value=$2,
                 forecast_2y=$3, forecast_5y=$4,
                 retired=$5, description=$6,
-                valuation_method=$7, cached_at=now()
+                valuation_method=$7,
+                valuation_expires_at = now() + interval '30 days',
+                cached_at = now()
           WHERE set_num=$8`,
         [
           val.retail_price, val.current_value,
@@ -59,12 +59,12 @@ export default async function (req, res) {
       const updated = await readCache(setNum);
       return res.json({ set: updated, source: "cache+ai" });
     } catch (e) {
-      console.warn("valuation upgrade failed; serving formula:", e.message);
+      console.warn("valuation upgrade failed; serving existing:", e.message);
       return res.json({ set: cached, source: "cache" });
     }
   }
 
-  // 3) Cache miss or stale — fetch from Rebrickable if configured.
+  // 3) Cache miss or stale data — fetch from Rebrickable if configured.
   if (rebrickableEnabled()) {
     try {
       const raw = await getSet(setNum);
@@ -77,23 +77,23 @@ export default async function (req, res) {
       const val = await aiValuation(merged);
 
       const row = {
-        set_num: merged.set_num,
-        name: merged.name,
-        theme: themeName,
-        subtheme: null,
-        year: merged.year,
-        pieces: merged.pieces,
-        minifigs: merged.minifigs,
-        retail_price: val.retail_price,
-        current_value: val.current_value,
-        forecast_2y: val.forecast_2y,
-        forecast_5y: val.forecast_5y,
-        image_url: merged.image_url,
+        set_num:           merged.set_num,
+        name:              merged.name,
+        theme:             themeName,
+        subtheme:          null,
+        year:              merged.year,
+        pieces:            merged.pieces,
+        minifigs:          merged.minifigs,    // real count from Rebrickable
+        retail_price:      val.retail_price,
+        current_value:     val.current_value,
+        forecast_2y:       val.forecast_2y,
+        forecast_5y:       val.forecast_5y,
+        image_url:         merged.image_url,
         includes_minifigs: merged.includes_minifigs,
-        retired: val.retired,
-        description: val.description || "",
-        source: "rebrickable",
-        valuation_method: val.method,
+        retired:           val.retired,
+        description:       val.description || "",
+        source:            "rebrickable",
+        valuation_method:  val.method,
       };
       await upsertCache(row);
       return res.json({ set: row, source: "rebrickable" });
@@ -111,15 +111,19 @@ export default async function (req, res) {
 
 // ────────────────────────────────────────────────────────────
 function needsDataRefresh(row) {
-  if (row.source === "seed") return false;       // hand-curated, never stale
-  if (row.source === "rebrickable_bulk") return false; // freshly imported, data is good
+  if (row.source === "seed") return false;
+  if (row.source === "rebrickable_bulk") return false;
   if (!row.cached_at) return false;
   const ageDays = (Date.now() - new Date(row.cached_at).getTime()) / (1000 * 60 * 60 * 24);
   return ageDays > CACHE_DAYS;
 }
+
 function needsValuationUpgrade(row) {
-  // bulk-imported rows have formula-only valuation; upgrade to AI on first view
-  return row.valuation_method === "formula_bulk";
+  // formula_bulk rows always need AI upgrade
+  if (row.valuation_method === "formula_bulk") return true;
+  // AI valuation that has passed its expiry
+  if (row.valuation_expires_at && new Date(row.valuation_expires_at) < new Date()) return true;
+  return false;
 }
 
 async function readCache(setNum) {
@@ -130,7 +134,7 @@ async function readCache(setNum) {
             forecast_2y::float   AS forecast_2y,
             forecast_5y::float   AS forecast_5y,
             image_url, includes_minifigs, retired, description,
-            cached_at, source, valuation_method
+            cached_at, source, valuation_method, valuation_expires_at
        FROM lego_sets WHERE set_num = $1`,
     [setNum],
   );
@@ -143,8 +147,10 @@ async function upsertCache(row) {
        (set_num, name, theme, subtheme, year, pieces, minifigs,
         retail_price, current_value, forecast_2y, forecast_5y,
         image_url, includes_minifigs, retired, description,
-        cached_at, source, valuation_method)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15, now(), $16, $17)
+        cached_at, source, valuation_method,
+        valuation_expires_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,
+             now(), $16, $17, now() + interval '30 days')
      ON CONFLICT (set_num) DO UPDATE
        SET name=EXCLUDED.name, theme=EXCLUDED.theme, year=EXCLUDED.year,
            pieces=EXCLUDED.pieces, minifigs=EXCLUDED.minifigs,
@@ -158,7 +164,8 @@ async function upsertCache(row) {
            description=EXCLUDED.description,
            cached_at=now(),
            source=EXCLUDED.source,
-           valuation_method=EXCLUDED.valuation_method`,
+           valuation_method=EXCLUDED.valuation_method,
+           valuation_expires_at=now() + interval '30 days'`,
     [
       row.set_num, row.name, row.theme, row.subtheme, row.year,
       row.pieces, row.minifigs,

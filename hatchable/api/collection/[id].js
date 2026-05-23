@@ -38,7 +38,8 @@ export default async function (req, res) {
             condition      = COALESCE($4, condition),
             notes          = COALESCE($5, notes),
             purchase_price = COALESCE($6, purchase_price),
-            purchased_at   = COALESCE($7, purchased_at)
+            purchased_at   = COALESCE($7, purchased_at),
+            last_modified  = now()
       WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
       RETURNING id, quantity, condition, purchased_at`,
     [id, userId, quantity ?? null, condition ?? null, notes ?? null, purchase_price ?? null, purchased_at ?? null]

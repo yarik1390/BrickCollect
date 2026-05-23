@@ -13,16 +13,16 @@ export default async function (req, res) {
             c.purchase_price::float AS purchase_price,
             s.retail_price::float   AS retail_price,
             s.current_value::float  AS current_value,
-            c.condition, c.added_at
+            c.condition, c.purchased_at, c.added_at, c.notes
        FROM user_collection c
        JOIN lego_sets s ON s.set_num = c.set_num
-      WHERE c.user_id = $1
+      WHERE c.user_id = $1 AND c.deleted_at IS NULL
       ORDER BY c.added_at DESC`,
     [userId]
   );
 
   const esc = (v) => `"${String(v || "").replace(/"/g, '""')}"`;
-  const header = "set_num,name,theme,year,quantity,purchase_price,retail_price,current_value,condition,added_at";
+  const header = "set_num,name,theme,year,quantity,purchase_price,retail_price,current_value,condition,purchased_at,added_at,notes";
   const csvRows = rows.map(r => [
     r.set_num,
     esc(r.name),
@@ -30,10 +30,12 @@ export default async function (req, res) {
     r.year || "",
     r.quantity,
     r.purchase_price != null ? r.purchase_price.toFixed(2) : "",
-    r.retail_price  != null ? r.retail_price.toFixed(2)  : "",
-    r.current_value != null ? r.current_value.toFixed(2) : "",
+    r.retail_price   != null ? r.retail_price.toFixed(2)   : "",
+    r.current_value  != null ? r.current_value.toFixed(2)  : "",
     esc(r.condition),
-    r.added_at ? new Date(r.added_at).toISOString().split("T")[0] : "",
+    r.purchased_at ? new Date(r.purchased_at).toISOString().split("T")[0] : "",
+    r.added_at     ? new Date(r.added_at).toISOString().split("T")[0]     : "",
+    esc(r.notes),
   ].join(","));
 
   const csv = [header, ...csvRows].join("\n");

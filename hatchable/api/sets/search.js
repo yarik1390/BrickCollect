@@ -22,6 +22,7 @@ export default async function (req, res) {
 
   // 2) if Rebrickable configured, fetch live too and merge
   let live = [];
+  let searchIncomplete = false;
   if (rebrickableEnabled() && q) {
     try {
       const remote = await searchSets(q, { limit: limit });
@@ -54,6 +55,7 @@ export default async function (req, res) {
       live = live.filter(Boolean);
     } catch (e) {
       console.warn("rebrickable search failed:", e.message);
+      searchIncomplete = true;
     }
   }
 
@@ -66,6 +68,7 @@ export default async function (req, res) {
   res.json({
     sets: merged.slice(0, limit),
     source: rebrickableEnabled() ? "live+cache" : "cache",
+    search_incomplete: searchIncomplete,
   });
 }
 
