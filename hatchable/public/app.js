@@ -13,7 +13,14 @@ const state = {
   catalogPageSize: 12,
   themes: [],
   themesLoadedAt: 0,
-  filter: { kind: "all", theme: null, range: "1M", sort: "added_desc", q: "" },
+  me: null,
+  filter: {
+    kind: "all", theme: null, range: "1M", q: "",
+    sort: localStorage.getItem("bv_sort") || "added_desc",
+    catalogSort: "value_desc",
+    catalogYear: "all",
+    catalogRetired: false,
+  },
   toastTimer: null,
   detail: { tab: "info" },
   pwa: { deferredPrompt: null },
@@ -224,6 +231,10 @@ async function api(path, opts = {}) {
   return r.json();
 }
 
+async function loadMe() {
+  try { state.me = await api("/me"); } catch { state.me = null; }
+}
+
 async function loadPortfolio(opts = {}) {
   const params = new URLSearchParams();
   if (opts.q)    params.set("q", opts.q);
@@ -311,6 +322,9 @@ const I = {
   sparkles:`<svg fill="none" viewBox="0 0 20 20" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M10 2l1.4 4.6L16 8l-4.6 1.4L10 14l-1.4-4.6L4 8l4.6-1.4L10 2z"/></svg>`,
   download:`<svg fill="none" viewBox="0 0 20 20" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M10 3v10M6 13l4 4 4-4M3 17h14"/></svg>`,
   pencil: `<svg fill="none" viewBox="0 0 20 20" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M13 4l3 3-8 8-3.5.5.5-3.5 8-8zM11 6l3 3"/></svg>`,
+  person: `<svg fill="none" viewBox="0 0 20 20" stroke="currentColor" stroke-width="1.7"><circle cx="10" cy="7" r="3.5" stroke-linecap="round" stroke-linejoin="round"/><path stroke-linecap="round" stroke-linejoin="round" d="M3 18c0-3.3 3.1-6 7-6s7 2.7 7 6"/></svg>`,
+  trash:  `<svg fill="none" viewBox="0 0 20 20" stroke="currentColor" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h12M7 6V4a1 1 0 011-1h4a1 1 0 011 1v2M8 10v5M12 10v5M5 6l1 11a1 1 0 001 1h6a1 1 0 001-1l1-11"/></svg>`,
+  gear:   `<svg fill="none" viewBox="0 0 20 20" stroke="currentColor" stroke-width="1.7"><circle cx="10" cy="10" r="3" stroke-linecap="round"/><path stroke-linecap="round" stroke-linejoin="round" d="M10 2v2M10 16v2M2 10h2M16 10h2M4.22 4.22l1.42 1.42M14.36 14.36l1.42 1.42M4.22 15.78l1.42-1.42M14.36 5.64l1.42-1.42"/></svg>`,
 };
 
 // =============================================================
@@ -520,6 +534,7 @@ function paintPortfolio() {
       scrubLabelFor: (v) => fmtMoneyShort(v),
     });
   }
+  wireCardLongPress(".set-list");
 
   $$("[data-range]").forEach(b => b.addEventListener("click", () => {
     state.filter.range = b.dataset.range;
@@ -531,6 +546,7 @@ function paintPortfolio() {
   }));
   $("#sortSel")?.addEventListener("change", async (e) => {
     state.filter.sort = e.target.value;
+    localStorage.setItem("bv_sort", state.filter.sort);
     await loadPortfolio({ sort: state.filter.sort, q: state.filter.q });
     paintPortfolio();
   });
@@ -572,16 +588,7 @@ function paintPortfolio() {
     toast("Downloading collection…");
   });
 
-  $("#alertsBtn")?.addEventListener("click", async () => {
-    const alerts = state.wishlistAlerts || [];
-    if (!alerts.length) return;
-    const names = alerts.map(a => `${a.set_name} — now ${fmtMoney(a.current_value)} (target ${fmtMoney(a.target_price)})`).join("\n");
-    alert("Wishlist alerts:\n\n" + names);
-    // Mark all as read
-    await Promise.all(alerts.map(a => api("/wishlist/" + a.id, { method: "POST" }).catch(() => {})));
-    state.wishlistAlerts = [];
-    document.querySelector("#alertsBtn")?.remove();
-  });
+  $("#alertsBtn")?.addEventListener("click", () => showAlertsSheet());
 }
 
 function renderEmptyPortfolio() {
@@ -641,16 +648,17 @@ function setListCardHTML(item) {
   const paid = (item.purchase_price || item.retail_price) * item.quantity;
   const d = pct(v, paid);
   const dSign = d >= 0 ? "up" : "down";
-  // Prefer annualized ROI when available, else simple % vs retail/paid
   const roiVal = item.annualized_roi != null
     ? item.annualized_roi
     : pct(item.current_value, item.retail_price);
   const roiSign = roiVal >= 0 ? "up" : "down";
+  const isNew = item.added_at && (Date.now() - new Date(item.added_at).getTime() < 7 * 86400_000);
   return `
-    <a class="set-list-card" href="#/set/${encodeURIComponent(item.set_num)}">
+    <a class="set-list-card" href="#/set/${encodeURIComponent(item.set_num)}" data-id="${item.id}" data-setnum="${item.set_num}">
       <div class="sl-img">
         <img src="${item.image_url}" alt="${item.name}" loading="lazy" onerror="this.style.opacity=0.15">
         ${item.quantity > 1 ? `<span class="qty-badge">×${item.quantity}</span>` : ""}
+        ${isNew ? `<span class="new-badge">NEW</span>` : ""}
       </div>
       <div class="sl-body">
         <div class="sl-name">${item.name}</div>
@@ -666,6 +674,74 @@ function setListCardHTML(item) {
       </div>
     </a>
   `;
+}
+
+function wireCardLongPress(containerSel) {
+  $$(containerSel + " .set-list-card").forEach(card => {
+    let longPressTimer = null;
+    card.addEventListener("touchstart", (e) => {
+      longPressTimer = setTimeout(() => {
+        longPressTimer = null;
+        haptic("medium");
+        e.preventDefault();
+        showCardQuickActions(card);
+      }, 500);
+    }, { passive: true });
+    const cancel = () => { clearTimeout(longPressTimer); longPressTimer = null; };
+    card.addEventListener("touchend",   cancel, { passive: true });
+    card.addEventListener("touchmove",  cancel, { passive: true });
+    card.addEventListener("touchcancel", cancel, { passive: true });
+  });
+}
+
+function showCardQuickActions(card) {
+  const setNum = card.dataset.setnum;
+  const id     = card.dataset.id;
+  if (!setNum) return;
+  const existing = $("#quickActionsMenu");
+  if (existing) existing.remove();
+
+  const menu = document.createElement("div");
+  menu.id = "quickActionsMenu";
+  menu.className = "quick-actions-menu";
+  menu.innerHTML = `
+    <div class="qa-item" data-action="view">${I.chev} View details</div>
+    <div class="qa-item" data-action="edit">${I.pencil} Edit price / date</div>
+    <div class="qa-item qa-danger" data-action="remove">${I.trash} Remove</div>
+    <div class="qa-item qa-cancel" data-action="cancel">Cancel</div>
+  `;
+  document.body.appendChild(menu);
+  requestAnimationFrame(() => menu.classList.add("show"));
+
+  menu.addEventListener("click", async (e) => {
+    const item = e.target.closest("[data-action]");
+    if (!item) return;
+    menu.classList.remove("show");
+    setTimeout(() => menu.remove(), 260);
+    const action = item.dataset.action;
+    if (action === "view")   location.hash = "#/set/" + encodeURIComponent(setNum);
+    if (action === "edit")   location.hash = "#/set/" + encodeURIComponent(setNum) + "#manage";
+    if (action === "remove") {
+      if (!id || !confirm("Remove from collection?")) return;
+      try {
+        await removeFromCollection(id);
+        await loadPortfolio({ sort: state.filter.sort, q: state.filter.q });
+        paintPortfolio();
+        toast("Removed", "success");
+      } catch (err) { toast(err.message, "error"); }
+    }
+  });
+
+  // Dismiss on outside tap
+  setTimeout(() => {
+    document.addEventListener("touchstart", function dismiss(e) {
+      if (!menu.contains(e.target)) {
+        menu.classList.remove("show");
+        setTimeout(() => menu.remove(), 260);
+        document.removeEventListener("touchstart", dismiss);
+      }
+    }, { passive: true, once: true });
+  }, 50);
 }
 
 // =============================================================
@@ -882,6 +958,13 @@ function paintSetDetail(set, entry) {
           </div>
 
           <div class="card tight">
+            <div class="manage-label">Purchase date</div>
+            <input type="date" class="price-input date-input" id="purchasedAtInput"
+              value="${entry.purchased_at ? entry.purchased_at.split("T")[0] : ""}"
+              style="width:100%;margin-top:8px">
+          </div>
+
+          <div class="card tight">
             <div class="manage-label">Condition</div>
             <select class="condition-sel" id="conditionSel">
               <option value="">Not specified</option>
@@ -1062,6 +1145,47 @@ function paintSetDetail(set, entry) {
       } catch (err) { toast(err.message, "error"); }
     }, 800);
   });
+
+  $("#purchasedAtInput")?.addEventListener("change", async (e) => {
+    if (!entry) return;
+    const val = e.target.value;
+    try {
+      await api("/collection/" + entry.id, { method: "PATCH", body: { purchased_at: val || null } });
+      entry.purchased_at = val || null;
+      toast("Date saved", "success");
+    } catch (err) { toast(err.message, "error"); }
+  });
+
+  // Swipe left/right to switch detail tabs
+  (function () {
+    const TABS = ["info", "forecast", "manage"];
+    let tx = 0, ty = 0;
+    const panels = $(".detail-tabs")?.closest(".page") || root.querySelector(".page");
+    if (!panels) return;
+    panels.addEventListener("touchstart", (e) => {
+      tx = e.touches[0].clientX;
+      ty = e.touches[0].clientY;
+    }, { passive: true });
+    panels.addEventListener("touchend", (e) => {
+      const dx = e.changedTouches[0].clientX - tx;
+      const dy = Math.abs(e.changedTouches[0].clientY - ty);
+      if (Math.abs(dx) < 60 || Math.abs(dx) < dy) return;
+      const cur = TABS.indexOf(state.detail.tab);
+      const next = dx < 0 ? Math.min(cur + 1, TABS.length - 1) : Math.max(cur - 1, 0);
+      if (next === cur) return;
+      haptic("light");
+      state.detail.tab = TABS[next];
+      $$(".detail-tab").forEach(t => t.classList.toggle("active", t.dataset.tab === state.detail.tab));
+      const panelId = { info: "tabInfo", forecast: "tabForecast", manage: "tabManage" };
+      $$(".detail-tab-panel").forEach(p => p.classList.toggle("active", p.id === panelId[state.detail.tab]));
+      if (state.detail.tab === "info" && !$("#setChart")?.children.length) {
+        renderChart($("#setChart"), hist, {
+          h: 64, stroke: dSign === "up" ? "#2F6D43" : "#A53224",
+          dot: true, scrubLabelFor: (v) => fmtMoneyShort(v),
+        });
+      }
+    }, { passive: true });
+  })();
 }
 
 // =============================================================
@@ -1084,6 +1208,22 @@ async function renderAdd() {
         ${I.search}
         <input class="search-input" id="searchInput" placeholder="Search name or set #" autocomplete="off" inputmode="search">
         <button class="search-clear" id="searchClear" style="display:none" aria-label="Clear">${I.close}</button>
+      </div>
+
+      <div class="filter-row" style="flex-wrap:wrap;gap:6px 4px">
+        <select class="sort-pill" id="catalogSortSel" aria-label="Sort catalog">
+          <option value="value_desc" ${state.filter.catalogSort === "value_desc" ? "selected" : ""}>Value ↓</option>
+          <option value="value_asc"  ${state.filter.catalogSort === "value_asc"  ? "selected" : ""}>Value ↑</option>
+          <option value="year_desc"  ${state.filter.catalogSort === "year_desc"  ? "selected" : ""}>Newest</option>
+          <option value="year_asc"   ${state.filter.catalogSort === "year_asc"   ? "selected" : ""}>Oldest</option>
+          <option value="name_asc"   ${state.filter.catalogSort === "name_asc"   ? "selected" : ""}>A–Z</option>
+          <option value="pieces_desc" ${state.filter.catalogSort === "pieces_desc" ? "selected" : ""}>Most pieces</option>
+        </select>
+        <button class="chip ${state.filter.catalogYear === "all"   ? "active" : ""}" data-year="all">All years</button>
+        <button class="chip ${state.filter.catalogYear === "2020s" ? "active" : ""}" data-year="2020s">2020s</button>
+        <button class="chip ${state.filter.catalogYear === "2010s" ? "active" : ""}" data-year="2010s">2010s</button>
+        <button class="chip ${state.filter.catalogYear === "pre2010" ? "active" : ""}" data-year="pre2010">Pre-2010</button>
+        <button class="chip ${state.filter.catalogRetired ? "active" : ""}" id="retiredChip">Retired</button>
       </div>
 
       <div class="filter-row" id="themeChips">
@@ -1122,6 +1262,38 @@ async function renderAdd() {
       state.catalog = null;
       state.catalogPage = 1;
       renderAdd();
+    });
+  }
+
+  // wire catalog sort
+  const catalogSortSel = $("#catalogSortSel");
+  if (catalogSortSel) {
+    catalogSortSel.addEventListener("change", () => {
+      state.filter.catalogSort = catalogSortSel.value;
+      state.catalogPage = 1;
+      paintCatalogResults();
+    });
+  }
+
+  // wire year filter chips
+  $$("#themeChips [data-year], .filter-row [data-year]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      state.filter.catalogYear = btn.dataset.year;
+      state.catalogPage = 1;
+      // re-render year chips active state
+      $$(".filter-row [data-year]").forEach(b => b.classList.toggle("active", b.dataset.year === state.filter.catalogYear));
+      paintCatalogResults();
+    });
+  });
+
+  // wire retired toggle
+  const retiredChip = $("#retiredChip");
+  if (retiredChip) {
+    retiredChip.addEventListener("click", () => {
+      state.filter.catalogRetired = !state.filter.catalogRetired;
+      retiredChip.classList.toggle("active", state.filter.catalogRetired);
+      state.catalogPage = 1;
+      paintCatalogResults();
     });
   }
 
@@ -1164,18 +1336,45 @@ async function renderAdd() {
   });
 }
 
+function applyCatalogFilters(sets) {
+  let result = sets.slice();
+  if (state.filter.catalogYear !== "all") {
+    result = result.filter(s => {
+      const y = s.year || 0;
+      if (state.filter.catalogYear === "2020s")   return y >= 2020;
+      if (state.filter.catalogYear === "2010s")   return y >= 2010 && y < 2020;
+      if (state.filter.catalogYear === "pre2010") return y < 2010 && y > 0;
+      return true;
+    });
+  }
+  if (state.filter.catalogRetired) {
+    result = result.filter(s => s.is_retired);
+  }
+  const sort = state.filter.catalogSort;
+  result.sort((a, b) => {
+    if (sort === "value_desc")  return (b.current_value || 0) - (a.current_value || 0);
+    if (sort === "value_asc")   return (a.current_value || 0) - (b.current_value || 0);
+    if (sort === "year_desc")   return (b.year || 0) - (a.year || 0);
+    if (sort === "year_asc")    return (a.year || 0) - (b.year || 0);
+    if (sort === "name_asc")    return (a.name || "").localeCompare(b.name || "");
+    if (sort === "pieces_desc") return (b.num_parts || 0) - (a.num_parts || 0);
+    return 0;
+  });
+  return result;
+}
+
 function paintCatalogResults() {
   const wrap = $("#results");
   if (!wrap) return;
-  const ownedSet = new Set((state.portfolio?.items || []).map(i => i.set_num));
-  const allSets = state.catalogAll || [];
-  const page = state.catalogPage;
-  const pageSize = state.catalogPageSize;
-  const totalPages = Math.ceil(allSets.length / pageSize);
-  const start = (page - 1) * pageSize;
-  const sets = allSets.slice(start, start + pageSize);
 
-  if (allSets.length === 0) {
+  const ownedSet = new Set((state.portfolio?.items || []).map(i => i.set_num));
+  const wishlistMap = new Map((state.wishlist || []).map(w => [w.set_num, w]));
+  const filtered = applyCatalogFilters(state.catalogAll || []);
+  const pageSize = state.catalogPageSize;
+  const visible = filtered.slice(0, state.catalogPage * pageSize);
+  const hasMore = visible.length < filtered.length;
+
+  if (filtered.length === 0) {
     wrap.innerHTML = `
       <div class="empty">
         <h3>No matches</h3>
@@ -1185,64 +1384,97 @@ function paintCatalogResults() {
   }
 
   const incomplete = state.catalog?.search_incomplete;
+
+  function cardHTML(s) {
+    const owned = ownedSet.has(s.set_num);
+    const wl = wishlistMap.get(s.set_num);
+    let gapBadge = "";
+    if (wl && wl.target_price && s.current_value) {
+      const gap = (s.current_value - wl.target_price) / wl.target_price * 100;
+      gapBadge = gap <= 0
+        ? `<span class="wl-gap-badge at-target">At target!</span>`
+        : `<span class="wl-gap-badge">${gap.toFixed(0)}% to target</span>`;
+    }
+    return `
+      <div class="add-result ${owned ? "owned" : ""}" data-set="${encodeURIComponent(s.set_num)}">
+        <div class="add-result-img">
+          <img src="${s.image_url}" alt="${s.name}" loading="lazy" onerror="this.style.opacity=0.12">
+          ${owned ? `<span class="owned-badge">${I.check}</span>` : ""}
+        </div>
+        <div class="add-result-body">
+          <div class="add-result-name">${s.name}</div>
+          <div class="add-result-meta">#${s.set_num}${s.theme ? " · " + s.theme : ""}${s.year ? " · " + s.year : ""}</div>
+          <div class="add-result-foot">
+            <span class="add-result-price">${fmtMoney(s.current_value || 0)}</span>
+            ${gapBadge}
+            <button class="add-result-btn ${owned ? "owned" : ""}" data-action="${owned ? "view" : "add"}" aria-label="${owned ? "Owned" : "Add"}">
+              ${owned ? I.check : I.plus}
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function wireCards(grid) {
+    grid.querySelectorAll(".add-result").forEach(el => {
+      el.addEventListener("click", async (e) => {
+        const setNum = decodeURIComponent(el.dataset.set);
+        const btn = e.target.closest(".add-result-btn");
+        if (btn && btn.dataset.action === "add") { e.stopPropagation(); await addQuick(setNum, el); return; }
+        location.hash = "#/set/" + encodeURIComponent(setNum);
+      });
+    });
+  }
+
   wrap.innerHTML = `
     ${incomplete ? `<div class="search-incomplete-banner">⚠ Live catalog search unavailable — showing local results only.</div>` : ""}
-    <div class="results-count">Showing ${start + 1}–${Math.min(start + pageSize, allSets.length)} of ${allSets.length} sets</div>
-    <div class="results-grid">
-      ${sets.map(s => {
-        const owned = ownedSet.has(s.set_num);
-        return `
-          <div class="add-result ${owned ? "owned" : ""}" data-set="${encodeURIComponent(s.set_num)}">
-            <div class="add-result-img">
-              <img src="${s.image_url}" alt="${s.name}" loading="lazy" onerror="this.style.opacity=0.12">
-              ${owned ? `<span class="owned-badge">${I.check}</span>` : ""}
-            </div>
-            <div class="add-result-body">
-              <div class="add-result-name">${s.name}</div>
-              <div class="add-result-meta">#${s.set_num}${s.theme ? " · " + s.theme : ""}${s.year ? " · " + s.year : ""}</div>
-              <div class="add-result-foot">
-                <span class="add-result-price">${fmtMoney(s.current_value || 0)}</span>
-                <button class="add-result-btn ${owned ? "owned" : ""}" data-action="${owned ? "view" : "add"}" aria-label="${owned ? "Owned" : "Add"}">
-                  ${owned ? I.check : I.plus}
-                </button>
-              </div>
-            </div>
-          </div>
-        `;
-      }).join("")}
+    <div class="results-count">${filtered.length} set${filtered.length !== 1 ? "s" : ""}</div>
+    <div class="results-grid" id="catalogGrid">
+      ${visible.map(cardHTML).join("")}
     </div>
-    ${totalPages > 1 ? `
-      <div class="pagination-bar">
-        <button class="page-btn" id="prevPage" ${page <= 1 ? "disabled" : ""}>‹</button>
-        <span class="page-label">Page <strong>${page}</strong> of ${totalPages}</span>
-        <button class="page-btn" id="nextPage" ${page >= totalPages ? "disabled" : ""}>›</button>
-      </div>
-    ` : ""}
+    ${hasMore ? `<div id="catalogSentinel" class="loading-more"><span class="spinner"></span></div>` : ""}
   `;
 
-  $$("#results .add-result").forEach(el => {
-    el.addEventListener("click", async (e) => {
-      const setNum = decodeURIComponent(el.dataset.set);
-      const btn = e.target.closest(".add-result-btn");
-      if (btn && btn.dataset.action === "add") {
-        e.stopPropagation();
-        await addQuick(setNum, el);
-        return;
-      }
-      location.hash = "#/set/" + encodeURIComponent(setNum);
-    });
-  });
+  const grid = $("#catalogGrid");
+  if (grid) wireCards(grid);
 
-  $("#prevPage")?.addEventListener("click", () => {
-    state.catalogPage--;
-    paintCatalogResults();
-    wrap.scrollIntoView({ behavior: "smooth", block: "start" });
-  });
-  $("#nextPage")?.addEventListener("click", () => {
-    state.catalogPage++;
-    paintCatalogResults();
-    wrap.scrollIntoView({ behavior: "smooth", block: "start" });
-  });
+  const sentinel = $("#catalogSentinel");
+  if (sentinel) {
+    const obs = new IntersectionObserver((entries) => {
+      if (!entries[0].isIntersecting) return;
+      obs.disconnect();
+      state.catalogPage++;
+      const newFiltered = applyCatalogFilters(state.catalogAll || []);
+      const newVisible = newFiltered.slice(0, state.catalogPage * pageSize);
+      const newCards = newFiltered.slice(visible.length, state.catalogPage * pageSize);
+      sentinel.remove();
+      const g = $("#catalogGrid");
+      if (g) {
+        newCards.forEach(s => {
+          const tmp = document.createElement("div");
+          tmp.innerHTML = cardHTML(s).trim();
+          g.appendChild(tmp.firstElementChild);
+        });
+        wireCards(g);
+      }
+      if (newVisible.length < newFiltered.length) {
+        const s2 = document.createElement("div");
+        s2.id = "catalogSentinel";
+        s2.className = "loading-more";
+        s2.innerHTML = `<span class="spinner"></span>`;
+        wrap.appendChild(s2);
+        const obs2 = new IntersectionObserver((e2) => {
+          if (!e2[0].isIntersecting) return;
+          obs2.disconnect();
+          state.catalogPage++;
+          paintCatalogResults();
+        }, { rootMargin: "200px" });
+        obs2.observe(s2);
+      }
+    }, { rootMargin: "200px" });
+    obs.observe(sentinel);
+  }
 }
 
 async function addQuick(setNum, rowEl) {
@@ -1577,14 +1809,53 @@ function flash() {
   f.classList.add("fire");
 }
 
+function showScanResultCard(set) {
+  const overlay = document.getElementById("scanOverlay");
+  const existing = document.getElementById("scanResultCard");
+  if (existing) existing.remove();
+
+  const card = document.createElement("div");
+  card.id = "scanResultCard";
+  card.className = "scan-result-card";
+  card.innerHTML = `
+    <div class="src-img">
+      <img src="${set.image_url || ""}" alt="${set.name}" onerror="this.style.opacity=0.2">
+    </div>
+    <div class="src-body">
+      <div class="src-name">${set.name}</div>
+      <div class="src-meta">#${set.set_num}${set.theme ? " · " + set.theme : ""}</div>
+      <div class="src-price">${fmtMoney(set.current_value || 0)}</div>
+    </div>
+    <div class="src-actions">
+      <button class="src-btn-add" id="srcAddBtn">Add to collection</button>
+      <button class="src-btn-view" id="srcViewBtn">View details</button>
+    </div>
+  `;
+  overlay.appendChild(card);
+  // animate in
+  requestAnimationFrame(() => card.classList.add("visible"));
+
+  document.getElementById("srcAddBtn").addEventListener("click", async () => {
+    try {
+      await addToCollection(set.set_num, 1);
+      await loadPortfolio();
+      toast("Added to collection", "success");
+    } catch (e) { toast(e.message, "error"); }
+    closeScan();
+  });
+  document.getElementById("srcViewBtn").addEventListener("click", () => {
+    closeScan();
+    location.hash = "#/set/" + encodeURIComponent(set.set_num);
+  });
+}
+
 async function onBarcode(code) {
   $("#scanHint").textContent = "Looking up barcode…";
   try {
     const r = await scanIdentify({ mode: "barcode", barcode: code });
     if (r.identified && r.set) {
-      closeScan();
-      toast(`Found: ${r.set.name}`, "success");
-      location.hash = "#/set/" + encodeURIComponent(r.set.set_num);
+      flash();
+      showScanResultCard(r.set);
       return;
     }
     // barcode didn't resolve — offer photo mode and text search fallback
@@ -1633,16 +1904,12 @@ async function sendPhotoToAPI(dataUrl) {
     const r = await scanIdentify({ mode: "image", image: dataUrl });
     if (r.identified && r.set) {
       flash();
-      closeScan();
-      toast(`Identified: ${r.set.name}`, "success");
-      location.hash = "#/set/" + encodeURIComponent(r.set.set_num);
+      showScanResultCard(r.set);
       return;
     }
     if (r.identified && r.suggestion) {
       flash();
-      closeScan();
-      toast(`${r.suggestion.name || r.suggestion.set_num} — opening details`, "success");
-      location.hash = "#/set/" + encodeURIComponent(r.suggestion.set_num);
+      showScanResultCard(r.suggestion);
       return;
     }
     $("#scanHint").textContent = "Couldn't identify";
@@ -1684,6 +1951,373 @@ function showPhotoPreview(dataUrl, video) {
   });
 }
 
+// =============================================================
+// Alerts sheet (replaces browser alert())
+// =============================================================
+function showAlertsSheet() {
+  const alerts = state.wishlistAlerts || [];
+  const existing = $("#alertsSheet");
+  if (existing) existing.remove();
+
+  const sheet = document.createElement("div");
+  sheet.id = "alertsSheet";
+  sheet.className = "ios-sheet";
+
+  const rows = alerts.length === 0
+    ? `<div class="alerts-empty">No new price alerts</div>`
+    : alerts.map(a => `
+        <div class="alert-row" data-id="${a.id}">
+          <div class="alert-row-body">
+            <div class="alert-row-name">${a.set_name || a.set_num}</div>
+            <div class="alert-row-detail">Dropped to ${fmtMoney(a.current_value)}${a.target_price ? ` · target ${fmtMoney(a.target_price)}` : ""}</div>
+          </div>
+          <button class="alert-dismiss" data-id="${a.id}" aria-label="Dismiss">×</button>
+        </div>
+      `).join("");
+
+  sheet.innerHTML = `
+    <div class="ios-sheet-inner">
+      <div class="ios-sheet-handle"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <h3 style="margin:0;font-family:var(--serif);font-size:20px">Price Alerts</h3>
+        ${alerts.length > 0 ? `<button class="cancel-sm" id="markAllReadBtn">Mark all read</button>` : ""}
+      </div>
+      <div id="alertsList">${rows}</div>
+      <a href="#/wishlist" class="primary-btn" id="viewWishlistBtn" style="display:block;text-align:center;margin-top:16px;text-decoration:none">View wishlist →</a>
+    </div>
+  `;
+
+  document.body.appendChild(sheet);
+  requestAnimationFrame(() => sheet.classList.add("show"));
+
+  async function dismissAlert(id) {
+    await api("/wishlist/" + id, { method: "POST" }).catch(() => {});
+    state.wishlistAlerts = state.wishlistAlerts.filter(a => a.id !== id);
+    const row = sheet.querySelector(`.alert-row[data-id="${id}"]`);
+    if (row) row.remove();
+    if (!state.wishlistAlerts.length) {
+      sheet.querySelector("#alertsList").innerHTML = `<div class="alerts-empty">No new price alerts</div>`;
+      sheet.querySelector("#markAllReadBtn")?.remove();
+    }
+    // Update badge
+    const badge = $("#alertsBtn .wishlist-badge");
+    if (badge) {
+      if (state.wishlistAlerts.length) badge.textContent = state.wishlistAlerts.length;
+      else document.querySelector("#alertsBtn")?.remove();
+    }
+  }
+
+  sheet.querySelectorAll(".alert-dismiss").forEach(btn => {
+    btn.addEventListener("click", (e) => { e.stopPropagation(); dismissAlert(btn.dataset.id); });
+  });
+
+  sheet.querySelector("#markAllReadBtn")?.addEventListener("click", async () => {
+    await Promise.all((state.wishlistAlerts || []).map(a => api("/wishlist/" + a.id, { method: "POST" }).catch(() => {})));
+    state.wishlistAlerts = [];
+    sheet.classList.remove("show");
+    setTimeout(() => sheet.remove(), 350);
+    document.querySelector("#alertsBtn")?.remove();
+  });
+
+  sheet.querySelector("#viewWishlistBtn")?.addEventListener("click", () => {
+    sheet.classList.remove("show");
+    setTimeout(() => sheet.remove(), 350);
+  });
+
+  sheet.addEventListener("click", (e) => {
+    if (e.target === sheet) { sheet.classList.remove("show"); setTimeout(() => sheet.remove(), 350); }
+  });
+}
+
+// =============================================================
+// Me page
+// =============================================================
+async function renderMe() {
+  const root = $("#root");
+  root.innerHTML = `
+    <div class="page">
+      ${topBar({ search: false })}
+      <div class="skel line" style="width:55%;height:36px;margin:8px 0 6px"></div>
+      <div class="skel line" style="width:35%;margin-bottom:20px"></div>
+      <div class="skel card" style="height:90px;margin-bottom:12px"></div>
+      <div class="skel card" style="height:120px"></div>
+    </div>
+  `;
+
+  try {
+    await Promise.all([
+      state.me ? Promise.resolve() : loadMe(),
+      state.portfolio ? Promise.resolve() : loadPortfolio(),
+      state.wishlist.length === 0 ? loadWishlist() : Promise.resolve(),
+    ]);
+  } catch (e) { /* non-fatal */ }
+
+  paintMe();
+}
+
+function paintMe() {
+  const root = $("#root");
+  const me = state.me || {};
+  const p  = state.portfolio || { total_value: 0, total_paid: 0, items: [] };
+  const displayName = me.display_name || "Brick Collector";
+  const handle      = me.handle ? "@" + me.handle : "";
+  const totalValue  = p.total_value || 0;
+  const totalPaid   = p.total_paid  || 0;
+  const netRoi      = totalPaid > 0 ? pct(totalValue, totalPaid) : 0;
+  const setCount    = p.items?.length || 0;
+  const alertCount  = (state.wishlistAlerts || []).length;
+  const wishCount   = (state.wishlist || []).length;
+
+  // Best performers
+  const performers = (p.items || [])
+    .filter(i => i.current_value && (i.purchase_price || i.retail_price))
+    .map(i => ({
+      ...i,
+      roi: i.annualized_roi ?? pct(i.current_value, i.purchase_price || i.retail_price),
+    }))
+    .sort((a, b) => b.roi - a.roi)
+    .slice(0, 3);
+
+  root.innerHTML = `
+    <div class="page">
+      ${topBar({ search: false, extra: `<a href="/settings.html" class="icon-btn" aria-label="Settings">${I.gear}</a>` })}
+
+      <div class="me-header">
+        <div class="me-avatar">${displayName.slice(0, 2).toUpperCase()}</div>
+        <div class="me-info">
+          <div class="me-name" id="meNameDisplay">${displayName}</div>
+          <div class="me-handle">${handle}</div>
+        </div>
+        <button class="icon-btn" id="editNameBtn" aria-label="Edit name">${I.pencil}</button>
+      </div>
+      <div id="nameEditWrap" style="display:none;margin-bottom:14px">
+        <input type="text" class="price-input" id="nameInput" maxlength="40" value="${displayName}" placeholder="Your display name" style="width:100%">
+        <div class="price-edit-btns">
+          <button class="cancel-sm" id="cancelNameBtn">Cancel</button>
+          <button class="save-sm"   id="saveNameBtn">Save</button>
+        </div>
+      </div>
+
+      <div class="me-stats-row">
+        <div class="me-stat"><div class="me-stat-v">${setCount}</div><div class="me-stat-k">Sets</div></div>
+        <div class="me-stat"><div class="me-stat-v">${fmtMoneyShort(totalValue)}</div><div class="me-stat-k">Value</div></div>
+        <div class="me-stat"><div class="me-stat-v">${fmtMoneyShort(totalPaid)}</div><div class="me-stat-k">Invested</div></div>
+        <div class="me-stat ${netRoi >= 0 ? "up" : "down"}"><div class="me-stat-v">${netRoi >= 0 ? "+" : ""}${netRoi.toFixed(1)}%</div><div class="me-stat-k">ROI</div></div>
+      </div>
+
+      ${performers.length > 0 ? `
+        <div class="card" style="margin-bottom:10px">
+          <div class="eyebrow mb-10">Top performers</div>
+          ${performers.map((item, i) => `
+            <a class="perf-row" href="#/set/${encodeURIComponent(item.set_num)}">
+              <span class="perf-rank">#${i+1}</span>
+              <img class="perf-img" src="${item.image_url}" alt="${item.name}" onerror="this.style.opacity=0.1">
+              <div class="perf-body">
+                <div class="perf-name">${item.name}</div>
+                <div class="perf-meta">${item.theme || "—"}</div>
+              </div>
+              <div class="perf-roi ${item.roi >= 0 ? "up" : "down"}">${item.roi >= 0 ? "+" : ""}${item.roi.toFixed(1)}%</div>
+            </a>
+          `).join("")}
+        </div>
+      ` : ""}
+
+      <div class="me-links-card card tight">
+        <a class="me-link-row" href="#/wishlist">
+          ${I.heart}
+          <span class="me-link-label">Wishlist</span>
+          ${wishCount > 0 ? `<span class="me-link-count">${wishCount}</span>` : ""}
+          <span class="me-link-chev">${I.chev}</span>
+        </a>
+        ${alertCount > 0 ? `
+          <button class="me-link-row" id="alertsLinkBtn">
+            ${I.sparkles}
+            <span class="me-link-label">Price alerts</span>
+            <span class="me-link-count alert">${alertCount}</span>
+            <span class="me-link-chev">${I.chev}</span>
+          </button>
+        ` : ""}
+        <button class="me-link-row" id="meExportBtn">
+          ${I.download}
+          <span class="me-link-label">Export collection</span>
+          <span class="me-link-chev">${I.chev}</span>
+        </button>
+        <label class="me-link-row" style="cursor:pointer">
+          ${I.arrowR}
+          <span class="me-link-label">Import CSV</span>
+          <input type="file" accept=".csv,text/csv" id="meImportInput" style="display:none">
+          <span class="me-link-chev">${I.chev}</span>
+        </label>
+        <a class="me-link-row" href="/settings.html">
+          ${I.gear}
+          <span class="me-link-label">Advanced settings</span>
+          <span class="me-link-chev">${I.chev}</span>
+        </a>
+      </div>
+    </div>
+  `;
+
+  // Edit name
+  $("#editNameBtn")?.addEventListener("click", () => {
+    $("#nameEditWrap").style.display = "block";
+    $("#editNameBtn").style.display  = "none";
+    $("#nameInput")?.focus();
+    $("#nameInput")?.select();
+  });
+  $("#cancelNameBtn")?.addEventListener("click", () => {
+    $("#nameEditWrap").style.display = "none";
+    $("#editNameBtn").style.display  = "";
+  });
+  $("#saveNameBtn")?.addEventListener("click", async () => {
+    const val = ($("#nameInput")?.value || "").trim();
+    if (!val) { toast("Name can't be empty", "error"); return; }
+    try {
+      await api("/me", { method: "PATCH", body: { display_name: val } });
+      if (state.me) state.me.display_name = val;
+      $("#meNameDisplay").textContent = val;
+      $(".me-avatar").textContent = val.slice(0, 2).toUpperCase();
+      $("#nameEditWrap").style.display = "none";
+      $("#editNameBtn").style.display  = "";
+      toast("Name updated", "success");
+    } catch (e) { toast(e.message, "error"); }
+  });
+
+  $("#alertsLinkBtn")?.addEventListener("click", () => showAlertsSheet());
+
+  $("#meExportBtn")?.addEventListener("click", () => {
+    const link = document.createElement("a");
+    link.href = API + "/collection/export";
+    link.download = "";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    toast("Downloading collection…");
+  });
+
+  document.getElementById("meImportInput")?.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const r = await fetch(API + "/collection/import", {
+        method: "POST",
+        headers: { "Content-Type": "text/csv" },
+        body: text,
+        credentials: "same-origin",
+      });
+      const data = await r.json().catch(() => ({}));
+      if (r.ok) toast(`Imported ${data.imported || 0} sets`, "success");
+      else throw new Error(data.error || "Import failed");
+    } catch (err) { toast(err.message, "error"); }
+    e.target.value = "";
+  });
+}
+
+// =============================================================
+// Wishlist page
+// =============================================================
+async function renderWishlist() {
+  const root = $("#root");
+  root.innerHTML = `
+    <div class="page">
+      <div class="detail-top" style="margin-bottom:16px">
+        <button class="icon-btn" onclick="history.length>1?history.back():(location.hash='#/me')">${I.close}</button>
+        <span style="font-family:var(--serif);font-size:19px;font-weight:500">Wishlist</span>
+        <div></div>
+      </div>
+      <div class="skel card" style="height:90px;margin-bottom:8px"></div>
+      <div class="skel card" style="height:90px;margin-bottom:8px"></div>
+      <div class="skel card" style="height:90px"></div>
+    </div>
+  `;
+
+  try {
+    if (state.wishlist.length === 0) await loadWishlist();
+  } catch (e) { /* non-fatal */ }
+
+  paintWishlist();
+}
+
+function paintWishlist() {
+  const root = $("#root");
+  const items = state.wishlist || [];
+
+  root.innerHTML = `
+    <div class="page">
+      <div class="detail-top" style="margin-bottom:16px">
+        <button class="icon-btn" id="wishlistBack">${I.close}</button>
+        <span style="font-family:var(--serif);font-size:19px;font-weight:500">Wishlist</span>
+        <div></div>
+      </div>
+
+      ${items.length === 0 ? `
+        <div class="empty">
+          <h3>Nothing on your list</h3>
+          <p>Tap the ${I.heart} on any set to add it here. You can also set a price alert.</p>
+          <a href="#/add" class="add-btn">${I.search} Browse catalog</a>
+        </div>
+      ` : `
+        <div class="wishlist-list">
+          ${items.map(w => {
+            const gap = w.target_price ? pct(w.current_value, w.target_price) - 100 : null;
+            const atTarget = gap !== null && gap <= 0;
+            const trendUp = w.forecast_2y && w.forecast_2y > w.current_value;
+            return `
+              <div class="wishlist-card" data-id="${w.id}" data-setnum="${w.set_num}">
+                <div class="wl-img-wrap">
+                  <img class="wl-img" src="${w.image_url}" alt="${w.name}" onerror="this.style.opacity=0.1">
+                </div>
+                <div class="wl-body">
+                  <div class="wl-name">${w.name}</div>
+                  <div class="wl-meta">#${w.set_num}${w.theme ? " · " + w.theme : ""}</div>
+                  ${w.target_price ? `
+                    <div class="wl-target">
+                      Target: ${fmtMoney(w.target_price)}
+                      ${atTarget
+                        ? `<span class="wl-gap at-target">At target!</span>`
+                        : `<span class="wl-gap">${gap >= 0 ? "+" : ""}${gap.toFixed(0)}%</span>`
+                      }
+                    </div>
+                  ` : ""}
+                </div>
+                <div class="wl-right">
+                  <div class="wl-price">${fmtMoney(w.current_value)}</div>
+                  <div class="wl-trend ${trendUp ? "up" : "down"}">${trendUp ? I.trend : I.trendDn}</div>
+                  <button class="wl-remove" data-id="${w.id}" aria-label="Remove from wishlist">×</button>
+                </div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `}
+    </div>
+  `;
+
+  $("#wishlistBack")?.addEventListener("click", () => {
+    if (history.length > 1) history.back(); else location.hash = "#/me";
+  });
+
+  $$(".wishlist-card").forEach(card => {
+    card.addEventListener("click", (e) => {
+      if (e.target.closest(".wl-remove")) return;
+      location.hash = "#/set/" + encodeURIComponent(card.dataset.setnum);
+    });
+  });
+
+  $$(".wl-remove").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      try {
+        await api("/wishlist/" + id, { method: "DELETE" });
+        state.wishlist = state.wishlist.filter(w => w.id != id);
+        paintWishlist();
+        toast("Removed from wishlist");
+      } catch (err) { toast(err.message, "error"); }
+    });
+  });
+}
+
 function showWishlistPriceSheet(set) {
   return new Promise(resolve => {
     const sheet = document.createElement("div");
@@ -1720,6 +2354,7 @@ function showWishlistPriceSheet(set) {
 function closeScan() {
   $("#scanOverlay").classList.remove("show");
   stopCamera();
+  document.getElementById("scanResultCard")?.remove();
   // reset hints
   $("#scanHint").textContent = "Point at a barcode";
   $("#scanSub").textContent  = "Or switch to Photo to identify a built set";
@@ -1831,6 +2466,7 @@ function setActiveNav(route) {
     const r = t.dataset.route;
     if (route === "/" && r === "/") t.classList.add("active");
     else if (route.startsWith("/set")) t.classList.toggle("active", r === "/");
+    else if (route === "/wishlist") t.classList.toggle("active", r === "/me");
     else t.classList.toggle("active", r === route);
   });
 }
@@ -1853,6 +2489,8 @@ async function route() {
   if (hash === "/add")              return renderAdd();
   if (hash === "/pile")             return renderPile();
   if (hash === "/blind")            return renderBlind();
+  if (hash === "/me")               return renderMe();
+  if (hash === "/wishlist")         return renderWishlist();
   const m = hash.match(/^\/set\/(.+)$/);
   if (m)                            return renderSetDetail(decodeURIComponent(m[1]));
   return renderPortfolio();
@@ -1869,13 +2507,14 @@ window.addEventListener("DOMContentLoaded", route);
   let ptrActive = false;
   const THRESHOLD = 72;
 
-  function isPortfolioPage() {
-    const h = (location.hash || "#/").replace(/^#/, "");
-    return h === "/" || h === "";
+  function currentPage() {
+    return (location.hash || "#/").replace(/^#/, "") || "/";
   }
+  const PTR_PAGES = ["/", "", "/add", "/me", "/wishlist"];
+  function isPTRPage() { return PTR_PAGES.includes(currentPage()); }
 
   document.addEventListener("touchstart", (e) => {
-    if (!isPortfolioPage()) return;
+    if (!isPTRPage()) return;
     if (window.scrollY > 4) return;
     ptrStartY = e.touches[0].clientY;
     ptrActive = true;
@@ -1895,9 +2534,13 @@ window.addEventListener("DOMContentLoaded", route);
     ptrActive = false;
     const ptr = $("#ptrIndicator");
     const dy = (e.changedTouches[0]?.clientY || 0) - ptrStartY;
-    if (dy >= THRESHOLD && isPortfolioPage()) {
+    if (dy >= THRESHOLD && isPTRPage()) {
       haptic("medium");
-      state.portfolio = null;
+      const pg = currentPage();
+      if (pg === "/" || pg === "") state.portfolio = null;
+      else if (pg === "/add")     { state.catalog = null; state.catalogAll = []; }
+      else if (pg === "/me")      state.me = null;
+      else if (pg === "/wishlist") state.wishlist = [];
       route();
       setTimeout(() => { if (ptr) ptr.classList.remove("visible"); }, 800);
     } else {
