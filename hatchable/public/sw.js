@@ -1,4 +1,4 @@
-const CACHE = 'brickvault-v3';
+const CACHE = 'brickvault-v4';
 const PRECACHE = ['/', '/app.js', '/app.css', '/manifest.json', '/icon.svg', '/icon-192.png', '/icon-512.png'];
 
 // API routes we'll cache for offline reading (GET only, network-first with fallback)
