@@ -12,7 +12,8 @@ const state = {
   catalogPage: 1,
   catalogPageSize: 12,
   themes: [],
-  filter: { kind: "all", theme: null, range: "1M", sort: "added_desc" },
+  themesLoadedAt: 0,
+  filter: { kind: "all", theme: null, range: "1M", sort: "added_desc", q: "" },
   toastTimer: null,
   detail: { tab: "info" },
   pwa: { deferredPrompt: null },
@@ -75,7 +76,7 @@ function toast(msg, kind = "") {
   t.innerHTML = (kind === "success" ? checkSVG : kind === "error" ? errSVG : "") + `<span>${msg}</span>`;
   requestAnimationFrame(() => t.classList.add("show"));
   clearTimeout(state.toastTimer);
-  state.toastTimer = setTimeout(() => t.classList.remove("show"), 2600);
+  state.toastTimer = setTimeout(() => t.classList.remove("show"), kind === "error" ? 4000 : 2600);
 }
 
 // Deterministic noise from set_num so each set has a stable price history.
@@ -223,7 +224,13 @@ async function api(path, opts = {}) {
   return r.json();
 }
 
-async function loadPortfolio() { state.portfolio = await api("/collection"); }
+async function loadPortfolio(opts = {}) {
+  const params = new URLSearchParams();
+  if (opts.q)    params.set("q", opts.q);
+  if (opts.sort) params.set("sort", opts.sort);
+  const qs = params.toString();
+  state.portfolio = await api("/collection" + (qs ? "?" + qs : ""));
+}
 async function loadWishlist() {
   try {
     const r = await api("/wishlist");
@@ -377,7 +384,16 @@ function paintPortfolio() {
 
   const start = total_paid || total_value * 0.85;
   const isEmpty = total_value === 0;
-  const snapshots = state.portfolioHistory || [];
+  const allSnapshots = state.portfolioHistory || [];
+
+  // Filter snapshots by active range pill
+  const rangeDays = { "1D": 1, "1W": 7, "1M": 30, "3M": 90, "1Y": 365, "ALL": Infinity };
+  const days = rangeDays[state.filter.range] ?? 30;
+  const cutoff = days === Infinity ? null : Date.now() - days * 86400_000;
+  const snapshots = cutoff
+    ? allSnapshots.filter(s => new Date(s.snapshot_at).getTime() >= cutoff)
+    : allSnapshots;
+
   // Use real history if we have ≥2 data points, else synthetic fallback
   const points = isEmpty ? null
     : snapshots.length >= 2
@@ -389,15 +405,11 @@ function paintPortfolio() {
   const deltaSign = delta >= 0 ? "up" : "down";
   const alertCount = (state.wishlistAlerts || []).length;
 
-  // Compute display list: filter by kind then sort
+  // Compute display list: filter by kind (API handles sort and text search)
+  const sort = state.filter.sort || "added_desc";
   let displaySets = [...sets];
   if (state.filter.kind === "minifigs") displaySets = displaySets.filter(s => s.includes_minifigs);
   else if (state.filter.kind === "sets") displaySets = displaySets.filter(s => !s.includes_minifigs);
-  const sort = state.filter.sort || "added_desc";
-  if (sort === "value_desc") displaySets.sort((a, b) => b.current_value * b.quantity - a.current_value * a.quantity);
-  else if (sort === "value_asc") displaySets.sort((a, b) => a.current_value * a.quantity - b.current_value * b.quantity);
-  else if (sort === "roi_desc") displaySets.sort((a, b) => pct(b.current_value, b.purchase_price || b.retail_price) - pct(a.current_value, a.purchase_price || a.retail_price));
-  else if (sort === "name_asc") displaySets.sort((a, b) => a.name.localeCompare(b.name));
 
   // Theme breakdown (top 6 themes by value)
   const themeMap = {};
@@ -439,6 +451,7 @@ function paintPortfolio() {
             </span>
             <span class="hero-meta">${sets.length} ${sets.length === 1 ? "set" : "sets"}</span>
           </div>
+          ${total_paid ? `<div class="hero-invested">Invested: ${fmtMoney(total_paid)}</div>` : ""}
         `}
 
         <div class="hero-chart" id="heroChart">
@@ -469,6 +482,14 @@ function paintPortfolio() {
           <option value="roi_desc"   ${sort === "roi_desc"   ? "selected" : ""}>ROI ↓</option>
           <option value="name_asc"   ${sort === "name_asc"   ? "selected" : ""}>A–Z</option>
         </select>
+        <button class="icon-btn search-toggle-btn" id="portfolioSearchToggle" aria-label="Search collection">${I.search}</button>
+      </div>
+      <div class="portfolio-search-wrap ${state.filter.q ? "open" : ""}" id="portfolioSearchWrap">
+        <div class="search-wrap mb-0">
+          ${I.search}
+          <input class="search-input" id="portfolioSearchInput" placeholder="Search your collection…" autocomplete="off" value="${state.filter.q || ""}">
+          <button class="search-clear" id="portfolioSearchClear" style="display:${state.filter.q ? "flex" : "none"}" aria-label="Clear">${I.close}</button>
+        </div>
       </div>
 
       ${sets.length === 0 ? renderEmptyPortfolio() : `
@@ -508,8 +529,37 @@ function paintPortfolio() {
     state.filter.kind = b.dataset.filter;
     paintPortfolio();
   }));
-  $("#sortSel")?.addEventListener("change", (e) => {
+  $("#sortSel")?.addEventListener("change", async (e) => {
     state.filter.sort = e.target.value;
+    await loadPortfolio({ sort: state.filter.sort, q: state.filter.q });
+    paintPortfolio();
+  });
+
+  // Portfolio text search
+  const portfolioSearchToggle = $("#portfolioSearchToggle");
+  const portfolioSearchWrap   = $("#portfolioSearchWrap");
+  const portfolioSearchInput  = $("#portfolioSearchInput");
+  const portfolioSearchClear  = $("#portfolioSearchClear");
+  portfolioSearchToggle?.addEventListener("click", () => {
+    portfolioSearchWrap?.classList.toggle("open");
+    if (portfolioSearchWrap?.classList.contains("open")) portfolioSearchInput?.focus();
+  });
+  let pSearchTimer;
+  portfolioSearchInput?.addEventListener("input", () => {
+    clearTimeout(pSearchTimer);
+    portfolioSearchClear.style.display = portfolioSearchInput.value ? "flex" : "none";
+    const q = portfolioSearchInput.value.trim();
+    pSearchTimer = setTimeout(async () => {
+      state.filter.q = q;
+      await loadPortfolio({ q, sort: state.filter.sort });
+      paintPortfolio();
+    }, 300);
+  });
+  portfolioSearchClear?.addEventListener("click", async () => {
+    portfolioSearchInput.value = "";
+    portfolioSearchClear.style.display = "none";
+    state.filter.q = "";
+    await loadPortfolio({ sort: state.filter.sort });
     paintPortfolio();
   });
   $("#exportBtn")?.addEventListener("click", () => {
@@ -536,32 +586,66 @@ function paintPortfolio() {
 
 function renderEmptyPortfolio() {
   return `
-    <div class="empty">
-      <div class="empty-art">
-        <svg width="88" height="88" viewBox="0 0 88 88" fill="none">
+    <div class="onboarding-card">
+      <div class="onboarding-art">
+        <svg width="72" height="72" viewBox="0 0 88 88" fill="none">
           <rect x="14" y="28" width="60" height="48" rx="6" fill="#F2EDE3" stroke="#C9BFA6" stroke-width="1.5"/>
           <circle cx="29" cy="24" r="4.5" fill="#B5762E" stroke="#0B1220" stroke-width="1.2"/>
           <circle cx="44" cy="24" r="4.5" fill="#B5762E" stroke="#0B1220" stroke-width="1.2"/>
           <circle cx="59" cy="24" r="4.5" fill="#B5762E" stroke="#0B1220" stroke-width="1.2"/>
-          <rect x="22" y="28" width="14" height="6" rx="1" fill="#B5762E" opacity="0.4"/>
-          <rect x="37" y="28" width="14" height="6" rx="1" fill="#B5762E" opacity="0.4"/>
-          <rect x="52" y="28" width="14" height="6" rx="1" fill="#B5762E" opacity="0.4"/>
           <path d="M22 50 L34 42 L46 50 L58 42 L66 50" stroke="#2F6D43" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
           <circle cx="66" cy="50" r="2.5" fill="#2F6D43"/>
         </svg>
       </div>
-      <h3>Start your vault</h3>
-      <p>Scan a box, search the catalog, or pick a set to start tracking value, history, and forecasts.</p>
-      <a href="#/add" class="add-btn">${I.plus} Add your first set</a>
+      <h3 class="onboarding-title">Start your vault</h3>
+      <p class="onboarding-sub">Three ways to add your collection:</p>
+      <div class="onboarding-steps">
+        <a href="#/pile" class="onboarding-step">
+          <span class="onboarding-step-icon">${I.scan}</span>
+          <div>
+            <div class="onboarding-step-title">Scan</div>
+            <div class="onboarding-step-desc">Point camera at a box or barcode</div>
+          </div>
+          <span class="onboarding-step-chev">${I.chev}</span>
+        </a>
+        <a href="#/add" class="onboarding-step">
+          <span class="onboarding-step-icon">${I.search}</span>
+          <div>
+            <div class="onboarding-step-title">Search</div>
+            <div class="onboarding-step-desc">Browse the full LEGO catalog by name or set #</div>
+          </div>
+          <span class="onboarding-step-chev">${I.chev}</span>
+        </a>
+        <a href="/settings.html" class="onboarding-step">
+          <span class="onboarding-step-icon">${I.download}</span>
+          <div>
+            <div class="onboarding-step-title">Import</div>
+            <div class="onboarding-step-desc">Upload a CSV from Brickset or BrickLink</div>
+          </div>
+          <span class="onboarding-step-chev">${I.chev}</span>
+        </a>
+      </div>
     </div>
   `;
 }
+
+const CONDITION_LABELS = {
+  "new":              "New",
+  "sealed":           "Sealed (MISB)",
+  "used_good":        "Used — Good",
+  "used_acceptable":  "Used — Acceptable",
+};
 
 function setListCardHTML(item) {
   const v = item.current_value * item.quantity;
   const paid = (item.purchase_price || item.retail_price) * item.quantity;
   const d = pct(v, paid);
   const dSign = d >= 0 ? "up" : "down";
+  // Prefer annualized ROI when available, else simple % vs retail/paid
+  const roiVal = item.annualized_roi != null
+    ? item.annualized_roi
+    : pct(item.current_value, item.retail_price);
+  const roiSign = roiVal >= 0 ? "up" : "down";
   return `
     <a class="set-list-card" href="#/set/${encodeURIComponent(item.set_num)}">
       <div class="sl-img">
@@ -571,6 +655,7 @@ function setListCardHTML(item) {
       <div class="sl-body">
         <div class="sl-name">${item.name}</div>
         <div class="sl-meta">#${item.set_num} · ${item.theme || "—"}</div>
+        <div class="sl-roi ${roiSign}">${roiVal >= 0 ? "+" : ""}${roiVal.toFixed(1)}%${item.annualized_roi != null ? "/yr" : ""}</div>
       </div>
       <div class="sl-right">
         <div class="sl-value">${fmtMoney(v)}</div>
@@ -635,11 +720,12 @@ function paintSetDetail(set, entry) {
   const dSign = retailDelta >= 0 ? "up" : "down";
 
   const hist = buildHistory(set.set_num, set.retail_price, set.current_value, 30);
-  const fc2pct = pct(set.forecast_2y, set.current_value);
-  const fc5pct = pct(set.forecast_5y, set.current_value);
-  const maxGain = Math.max(set.forecast_5y, set.current_value * 1.5);
-  const bar2 = Math.min(100, ((set.forecast_2y - set.current_value) / (maxGain - set.current_value)) * 100);
-  const bar5 = Math.min(100, ((set.forecast_5y - set.current_value) / (maxGain - set.current_value)) * 100);
+  const hasForecast = set.forecast_2y > 0 && set.forecast_5y > 0;
+  const fc2pct = hasForecast ? pct(set.forecast_2y, set.current_value) : 0;
+  const fc5pct = hasForecast ? pct(set.forecast_5y, set.current_value) : 0;
+  const maxGain = hasForecast ? Math.max(set.forecast_5y, set.current_value * 1.5) : set.current_value * 1.5;
+  const bar2 = hasForecast ? Math.min(100, ((set.forecast_2y - set.current_value) / (maxGain - set.current_value)) * 100) : 0;
+  const bar5 = hasForecast ? Math.min(100, ((set.forecast_5y - set.current_value) / (maxGain - set.current_value)) * 100) : 0;
 
   const tab = state.detail.tab;
   const panelId = { info: "tabInfo", forecast: "tabForecast", manage: "tabManage" };
@@ -733,19 +819,25 @@ function paintSetDetail(set, entry) {
       <div class="detail-tab-panel ${tab === "forecast" ? "active" : ""}" id="tabForecast">
         <div class="card forecast-card">
           <h4>Forecast</h4>
-          <div class="subhead">Projected market value</div>
+          <div class="subhead">${qty > 0 ? `Your ${qty > 1 ? qty + " × " : ""}${set.name.split(" ").slice(0,3).join(" ")} projected value` : "Projected market value"}</div>
+          ${!hasForecast ? `<p class="muted text-sm" style="margin:12px 0">Forecast not yet available for this set.</p>` : `
           <div class="forecast-row year-2">
             <span class="forecast-when">2 yr</span>
             <div class="forecast-bar"><div class="forecast-bar-fill" style="width:${bar2}%"></div></div>
-            <span class="forecast-amt">${fmtMoneyShort(set.forecast_2y)}</span>
+            <span class="forecast-amt">${fmtMoneyShort(qty > 0 ? set.forecast_2y * qty : set.forecast_2y)}</span>
             <span class="forecast-gain">+${fc2pct.toFixed(0)}%</span>
           </div>
           <div class="forecast-row year-5">
             <span class="forecast-when">5 yr</span>
             <div class="forecast-bar"><div class="forecast-bar-fill" style="width:${bar5}%"></div></div>
-            <span class="forecast-amt">${fmtMoneyShort(set.forecast_5y)}</span>
+            <span class="forecast-amt">${fmtMoneyShort(qty > 0 ? set.forecast_5y * qty : set.forecast_5y)}</span>
             <span class="forecast-gain">+${fc5pct.toFixed(0)}%</span>
           </div>
+          ${qty > 0 && hasForecast ? `
+            <p class="muted text-sm" style="margin:14px 0 0;line-height:1.5">
+              Your ${qty > 1 ? qty + " copies" : "copy"} could be worth <strong>${fmtMoney(set.forecast_5y * qty)}</strong> in 5 years.
+            </p>` : ""}
+          `}
           ${set.description ? `<p class="muted text-sm" style="margin:18px 0 0;line-height:1.5">${set.description}</p>` : ""}
         </div>
       </div>
@@ -754,9 +846,9 @@ function paintSetDetail(set, entry) {
         <div class="card qty-card">
           <div class="qty-label">${I.box}<span>${qty > 0 ? "In your collection" : "Add to collection"}</span></div>
           <div class="qty-controls">
-            <button class="qty-btn minus" ${qty === 0 ? "disabled" : ""}>−</button>
-            <span class="qty-value">${qty}</span>
-            <button class="qty-btn plus">+</button>
+            <button class="qty-btn minus" id="qtyMinus" ${qty === 0 ? "disabled" : ""}>−</button>
+            <span class="qty-value" id="qtyValue">${qty}</span>
+            <button class="qty-btn plus" id="qtyPlus">+</button>
           </div>
         </div>
         ${qty > 0 && entry ? `
@@ -778,6 +870,31 @@ function paintSetDetail(set, entry) {
                 <button class="save-sm" id="savePriceBtn">Save</button>
               </div>
             </div>
+            ${entry.purchase_price ? `
+              <div class="pl-row">
+                <span class="pl-item">Paid <strong>${fmtMoney(entry.purchase_price)}</strong></span>
+                <span class="pl-sep">·</span>
+                <span class="pl-item">Now <strong>${fmtMoney(set.current_value)}</strong></span>
+                <span class="pl-sep">·</span>
+                <span class="pl-item pl-net ${set.current_value >= entry.purchase_price ? "up" : "down"}">Net <strong>${set.current_value - entry.purchase_price >= 0 ? "+" : ""}${fmtMoney(set.current_value - entry.purchase_price)}</strong></span>
+              </div>
+            ` : ""}
+          </div>
+
+          <div class="card tight">
+            <div class="manage-label">Condition</div>
+            <select class="condition-sel" id="conditionSel">
+              <option value="">Not specified</option>
+              <option value="new"             ${entry.condition === "new"             ? "selected" : ""}>New</option>
+              <option value="sealed"          ${entry.condition === "sealed"          ? "selected" : ""}>Sealed (MISB)</option>
+              <option value="used_good"       ${entry.condition === "used_good"       ? "selected" : ""}>Used — Good</option>
+              <option value="used_acceptable" ${entry.condition === "used_acceptable" ? "selected" : ""}>Used — Acceptable</option>
+            </select>
+          </div>
+
+          <div class="card tight">
+            <div class="manage-label">Notes</div>
+            <textarea class="notes-ta" id="notesTa" rows="3" placeholder="Any notes about this set…">${entry.notes || ""}</textarea>
           </div>
         ` : ""}
         ${qty > 0 ? `<button class="danger-btn" id="removeBtn">Remove from collection</button>` : ""}
@@ -824,23 +941,44 @@ function paintSetDetail(set, entry) {
     else location.hash = "#/";
   });
 
-  $(".qty-btn.plus")?.addEventListener("click", async () => {
+  $("#qtyPlus")?.addEventListener("click", async () => {
+    const plusBtn = $("#qtyPlus");
+    const qtyDisplay = $("#qtyValue");
+    // Optimistic update
+    const newQty = qty + 1;
+    if (qtyDisplay) qtyDisplay.textContent = newQty;
+    if (plusBtn) { plusBtn.disabled = true; plusBtn.setAttribute("aria-busy", "true"); }
     try {
-      await addToCollection(set.set_num, qty + 1);
+      await addToCollection(set.set_num, newQty);
       await loadPortfolio();
       paintSetDetail(set, state.portfolio.items.find(i => i.set_num === set.set_num));
       if (qty === 0) toast("Added to collection", "success");
-    } catch (e) { toast(e.message, "error"); }
+    } catch (e) {
+      if (qtyDisplay) qtyDisplay.textContent = qty; // rollback
+      toast(e.message, "error");
+    } finally {
+      if (plusBtn) { plusBtn.disabled = false; plusBtn.removeAttribute("aria-busy"); }
+    }
   });
-  $(".qty-btn.minus")?.addEventListener("click", async () => {
+  $("#qtyMinus")?.addEventListener("click", async () => {
     if (qty <= 0) return;
+    const minusBtn = $("#qtyMinus");
+    const qtyDisplay = $("#qtyValue");
+    const newQty = qty - 1;
+    if (qtyDisplay) qtyDisplay.textContent = newQty;
+    if (minusBtn) { minusBtn.disabled = true; minusBtn.setAttribute("aria-busy", "true"); }
     try {
-      if (qty - 1 === 0) await removeFromCollection(entry.id);
-      else await addToCollection(set.set_num, qty - 1);
+      if (newQty === 0) await removeFromCollection(entry.id);
+      else await addToCollection(set.set_num, newQty);
       await loadPortfolio();
       const next = state.portfolio.items.find(i => i.set_num === set.set_num);
       paintSetDetail(set, next);
-    } catch (e) { toast(e.message, "error"); }
+    } catch (e) {
+      if (qtyDisplay) qtyDisplay.textContent = qty; // rollback
+      toast(e.message, "error");
+    } finally {
+      if (minusBtn) { minusBtn.disabled = false; minusBtn.removeAttribute("aria-busy"); }
+    }
   });
   $("#removeBtn")?.addEventListener("click", async () => {
     if (!entry) return;
@@ -870,7 +1008,8 @@ function paintSetDetail(set, entry) {
         btn.setAttribute("aria-label", "Add to wishlist");
         toast("Removed from wishlist");
       } else {
-        const r = await api("/wishlist", { method: "POST", body: { set_num: set.set_num } });
+        const targetPrice = await showWishlistPriceSheet(set);
+        const r = await api("/wishlist", { method: "POST", body: { set_num: set.set_num, target_price: targetPrice || null } });
         state.wishlist.push({ ...r.entry, set_num: set.set_num });
         btn.classList.add("wishlisted");
         btn.setAttribute("aria-label", "Remove from wishlist");
@@ -899,6 +1038,29 @@ function paintSetDetail(set, entry) {
       paintSetDetail(set, updated);
       toast("Price updated", "success");
     } catch (e) { toast(e.message, "error"); }
+  });
+
+  $("#conditionSel")?.addEventListener("change", async (e) => {
+    if (!entry) return;
+    const condition = e.target.value;
+    try {
+      await api("/collection/" + entry.id, { method: "PATCH", body: { condition } });
+      entry.condition = condition;
+      toast("Condition saved", "success");
+    } catch (err) { toast(err.message, "error"); }
+  });
+
+  let notesTimer;
+  $("#notesTa")?.addEventListener("input", () => {
+    clearTimeout(notesTimer);
+    notesTimer = setTimeout(async () => {
+      if (!entry) return;
+      const notes = $("#notesTa").value;
+      try {
+        await api("/collection/" + entry.id, { method: "PATCH", body: { notes } });
+        entry.notes = notes;
+      } catch (err) { toast(err.message, "error"); }
+    }, 800);
   });
 }
 
@@ -934,8 +1096,8 @@ async function renderAdd() {
 
   $("#scanCta").addEventListener("click", openScan);
 
-  if (state.themes.length === 0) {
-    try { await loadThemes(); } catch (e) { /* non-fatal */ }
+  if (state.themes.length === 0 || Date.now() - state.themesLoadedAt > 5 * 60_000) {
+    try { await loadThemes(); state.themesLoadedAt = Date.now(); } catch (e) { /* non-fatal */ }
   }
   const chips = $("#themeChips");
   state.themes.slice(0, 14).forEach(t => {
@@ -1180,69 +1342,87 @@ const BLIND_SAMPLE = [
   { name: "Yoda",               series: "Star Wars",     rarity: "rare",      value: 55,   image_url: "https://images.brickset.com/sets/large/sw1113-1.jpg" },
 ];
 
-function renderBlind() {
-  const sample = BLIND_SAMPLE;
-
-  $("#root").innerHTML = `
+async function renderBlind() {
+  const root = $("#root");
+  root.innerHTML = `
     <div class="page">
       ${topBar()}
       <div class="eyebrow mb-8">Identify</div>
       <h1 class="h-display mb-24">Blind Bag</h1>
-
       <div class="scan-cta" id="scanCta">
         <div class="label">Feel · scan · ID</div>
         <h2>Identify a blind bag</h2>
         <p>Squeeze the bag, hold it up to the camera. We guess what's inside.</p>
         <div class="arrow">${I.scan}</div>
       </div>
-
-      <div class="filter-row">
-        <button class="chip active">All series</button>
-        <button class="chip">Minifigures</button>
-        <button class="chip">Star Wars</button>
-        <button class="chip">Ninjago</button>
-        <button class="chip">Harry Potter</button>
+      <div class="filter-row" id="blindFilterRow">
+        <button class="chip active" data-series="">All series</button>
       </div>
-
-      <div class="grid">
-        ${sample.map(f => `
-          <div class="fig-card fig-${f.rarity}">
-            <span class="rarity rarity-${f.rarity}">${f.rarity}</span>
-            <div class="fig-img-wrap">
-              <img src="${f.image_url}" alt="${f.name}" onerror="this.style.opacity=0">
-            </div>
-            <div class="name">${f.name}</div>
-            <div class="muted text-xs mb-4">${f.series}</div>
-            <div class="value">${fmtMoney(f.value)}</div>
-          </div>
-        `).join("")}
+      <div id="blindGrid">
+        <div class="skel card" style="height:100px;margin-bottom:8px"></div>
+        <div class="skel card" style="height:100px;margin-bottom:8px"></div>
+        <div class="skel card" style="height:100px"></div>
       </div>
     </div>
   `;
   $("#scanCta").addEventListener("click", openScan);
 
-  // Wire blind bag filter chips
-  const seriesNames = ["All series", "Minifigures", "Star Wars", "Ninjago", "Harry Potter"];
-  $$(".filter-row .chip").forEach((chip, i) => {
-    chip.addEventListener("click", () => {
-      $$(".filter-row .chip").forEach(c => c.classList.remove("active"));
-      chip.classList.add("active");
-      const label = seriesNames[i];
-      const filtered = label === "All series" ? sample : sample.filter(f => f.series === label);
-      const grid = $(".grid");
-      if (grid) grid.innerHTML = filtered.map(f => `
-        <div class="fig-card fig-${f.rarity}">
-          <span class="rarity rarity-${f.rarity}">${f.rarity}</span>
-          <div class="fig-img-wrap">
-            <img src="${f.image_url}" alt="${f.name}" onerror="this.style.opacity=0">
-          </div>
-          <div class="name">${f.name}</div>
-          <div class="muted text-xs mb-4">${f.series}</div>
-          <div class="value">${fmtMoney(f.value)}</div>
+  let allFigs = [];
+  let activeSeries = "";
+
+  function paintFigs(figs) {
+    const grid = $("#blindGrid");
+    if (!grid) return;
+    if (figs.length === 0) {
+      grid.innerHTML = `<div class="empty"><h3>No minifigs yet</h3><p>Import the catalog in <a href="/settings.html">Settings</a> to populate.</p></div>`;
+      return;
+    }
+    grid.innerHTML = `<div class="grid">${figs.map(f => `
+      <div class="fig-card fig-${f.rarity}">
+        <span class="rarity rarity-${f.rarity}">${f.rarity}</span>
+        <div class="fig-img-wrap">
+          <img src="${f.image_url}" alt="${f.name}" onerror="this.style.opacity=0">
         </div>
-      `).join("");
+        <div class="name">${f.name}</div>
+        <div class="muted text-xs mb-4">${f.series}</div>
+        <div class="value">${fmtMoney(f.value)}</div>
+      </div>
+    `).join("")}</div>`;
+  }
+
+  try {
+    const r = await api("/minifigs?limit=60");
+    allFigs = r.minifigs || [];
+
+    // Populate series chips
+    const filterRow = $("#blindFilterRow");
+    if (filterRow && r.series && r.series.length > 1) {
+      r.series.slice(0, 8).forEach(s => {
+        const btn = document.createElement("button");
+        btn.className = "chip";
+        btn.dataset.series = s;
+        btn.textContent = s;
+        filterRow.appendChild(btn);
+      });
+    }
+
+    // Use seeded data if DB is empty
+    if (allFigs.length === 0) allFigs = BLIND_SAMPLE;
+    paintFigs(allFigs);
+
+    $("#blindFilterRow")?.addEventListener("click", (e) => {
+      const chip = e.target.closest("[data-series]");
+      if (!chip) return;
+      activeSeries = chip.dataset.series;
+      $$("[data-series]", $("#blindFilterRow")).forEach(c => c.classList.toggle("active", c === chip));
+      const filtered = activeSeries ? allFigs.filter(f => f.series === activeSeries) : allFigs;
+      paintFigs(filtered);
     });
-  });
+  } catch (e) {
+    // Fallback to sample data
+    allFigs = BLIND_SAMPLE;
+    paintFigs(allFigs);
+  }
 }
 
 // =============================================================
@@ -1252,7 +1432,43 @@ async function openScan() {
   const overlay = $("#scanOverlay");
   overlay.classList.add("show");
   setupScanModeToggle();
+  // If permission not already granted, show pre-permission dialog first
+  try {
+    const perm = await navigator.permissions?.query({ name: "camera" }).catch(() => null);
+    if (perm && perm.state === "prompt") {
+      await showCameraPermissionDialog();
+    }
+  } catch {}
   await startCamera();
+}
+
+function showCameraPermissionDialog() {
+  return new Promise(resolve => {
+    const existing = $("#cameraPermDialog");
+    if (existing) { existing.remove(); }
+    const dlg = document.createElement("div");
+    dlg.id = "cameraPermDialog";
+    dlg.className = "cam-perm-dialog";
+    dlg.innerHTML = `
+      <div class="cam-perm-inner">
+        <div class="cam-perm-icon">📷</div>
+        <h3>Camera access needed</h3>
+        <p>Brickvault uses your camera to scan barcodes and identify LEGO sets from photos.</p>
+        <button class="primary-btn" id="camPermAllow">Allow camera</button>
+        <button class="cancel-sm" id="camPermDeny" style="margin-top:8px;width:100%">Not now</button>
+      </div>
+    `;
+    document.getElementById("scanOverlay").appendChild(dlg);
+    document.getElementById("camPermAllow").addEventListener("click", () => {
+      dlg.remove();
+      resolve();
+    });
+    document.getElementById("camPermDeny").addEventListener("click", () => {
+      dlg.remove();
+      closeScan();
+      resolve();
+    });
+  });
 }
 
 function setupScanModeToggle() {
@@ -1392,8 +1608,6 @@ async function capturePhoto() {
   const video = $("#scanVideo");
   if (!video.videoWidth) return;
 
-  flash();
-
   // Downscale to keep upload reasonable
   const target = 1024;
   const ratio = video.videoWidth / video.videoHeight;
@@ -1405,6 +1619,11 @@ async function capturePhoto() {
   ctx.drawImage(video, 0, 0, w, h);
   const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
 
+  // Show preview and wait for confirm / retake
+  return showPhotoPreview(dataUrl, video);
+}
+
+async function sendPhotoToAPI(dataUrl) {
   $("#scanHint").textContent = "Identifying…";
   $("#scanSub").textContent  = "GPT-4o is looking at your photo";
   $("#scanCapture").style.opacity = "0.4";
@@ -1413,12 +1632,14 @@ async function capturePhoto() {
   try {
     const r = await scanIdentify({ mode: "image", image: dataUrl });
     if (r.identified && r.set) {
+      flash();
       closeScan();
       toast(`Identified: ${r.set.name}`, "success");
       location.hash = "#/set/" + encodeURIComponent(r.set.set_num);
       return;
     }
     if (r.identified && r.suggestion) {
+      flash();
       closeScan();
       toast(`${r.suggestion.name || r.suggestion.set_num} — opening details`, "success");
       location.hash = "#/set/" + encodeURIComponent(r.suggestion.set_num);
@@ -1435,6 +1656,67 @@ async function capturePhoto() {
   }
 }
 
+function showPhotoPreview(dataUrl, video) {
+  // Remove any existing preview
+  $("#photoPreviewOverlay")?.remove();
+
+  const overlay = document.createElement("div");
+  overlay.id = "photoPreviewOverlay";
+  overlay.className = "photo-preview-overlay";
+  overlay.innerHTML = `
+    <img src="${dataUrl}" alt="Preview" class="photo-preview-img">
+    <div class="photo-preview-actions">
+      <button class="photo-retake-btn" id="retakeBtn">Retake</button>
+      <button class="photo-confirm-btn" id="confirmPhotoBtn">Identify →</button>
+    </div>
+  `;
+  document.getElementById("scanOverlay").appendChild(overlay);
+
+  return new Promise(resolve => {
+    document.getElementById("confirmPhotoBtn").addEventListener("click", () => {
+      overlay.remove();
+      resolve(sendPhotoToAPI(dataUrl));
+    });
+    document.getElementById("retakeBtn").addEventListener("click", () => {
+      overlay.remove();
+      resolve();
+    });
+  });
+}
+
+function showWishlistPriceSheet(set) {
+  return new Promise(resolve => {
+    const sheet = document.createElement("div");
+    sheet.className = "ios-sheet";
+    sheet.innerHTML = `
+      <div class="ios-sheet-inner">
+        <div class="ios-sheet-handle"></div>
+        <h3>Add to wishlist</h3>
+        <p style="font-size:13.5px;color:var(--ink-mute);margin:0 0 14px">Set a price alert (optional) — we'll notify you when ${set.name} drops to or below your target.</p>
+        <label style="display:block;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--ink-mute);margin-bottom:6px">Target price</label>
+        <input type="number" id="wishlistTargetInput" class="price-input" placeholder="${set.current_value ? Math.round(set.current_value * 0.9) : "0.00"}" step="0.01" min="0" style="width:100%;margin-bottom:14px">
+        <div style="display:flex;gap:10px">
+          <button class="cancel-sm" id="wishlistSkipBtn" style="flex:1">Skip</button>
+          <button class="save-sm" id="wishlistSaveBtn" style="flex:2">Save alert</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(sheet);
+    requestAnimationFrame(() => sheet.classList.add("show"));
+    function close(val) {
+      sheet.classList.remove("show");
+      setTimeout(() => sheet.remove(), 350);
+      resolve(val);
+    }
+    document.getElementById("wishlistSkipBtn").addEventListener("click", () => close(null));
+    document.getElementById("wishlistSaveBtn").addEventListener("click", () => {
+      const v = parseFloat(document.getElementById("wishlistTargetInput").value);
+      close(isNaN(v) ? null : v);
+    });
+    sheet.addEventListener("click", (e) => { if (e.target === sheet) close(null); });
+  });
+}
+
 function closeScan() {
   $("#scanOverlay").classList.remove("show");
   stopCamera();
@@ -1447,6 +1729,10 @@ function closeScan() {
 document.addEventListener("DOMContentLoaded", () => {
   const cap = $("#scanCapture");
   if (cap) cap.addEventListener("click", capturePhoto);
+  // Haptic feedback on nav tab press
+  $$(".nav-tab").forEach(t => {
+    t.addEventListener("click", () => haptic("light"));
+  });
 });
 
 // expose to inline handlers
@@ -1627,7 +1913,7 @@ window.addEventListener("DOMContentLoaded", route);
   let swipeStartX = 0;
   let swipeStartY = 0;
   let swipeActive = false;
-  const EDGE = 28;
+  const EDGE = 44;
   const MIN_DIST = 72;
 
   document.addEventListener("touchstart", (e) => {

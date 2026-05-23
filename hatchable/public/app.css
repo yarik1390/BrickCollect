@@ -1646,7 +1646,14 @@ img { display: block; max-width: 100%; }
 }
 .detail-tab.active { color: var(--lego-red); border-bottom-color: var(--lego-red); }
 .detail-tab-panel { display: none; padding-top: 16px; }
-.detail-tab-panel.active { display: block; }
+.detail-tab-panel.active {
+  display: block;
+  animation: tab-in 150ms var(--ease) both;
+}
+@keyframes tab-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 
 /* ============================================================
    Compact scan pill + search clear button
@@ -2037,3 +2044,260 @@ img:not([src]) {
   z-index: 1000;
 }
 .offline-banner.visible { display: block; }
+
+/* ── Chart line-draw animation ─────────────────────────────── */
+.sparkline path[stroke], .hero-chart path[stroke] {
+  stroke-dasharray: 2000;
+  stroke-dashoffset: 2000;
+  animation: chart-draw 600ms var(--ease) forwards;
+}
+@keyframes chart-draw {
+  from { stroke-dashoffset: 2000; }
+  to   { stroke-dashoffset: 0; }
+}
+
+/* ── Hero invested line ─────────────────────────────────────── */
+.hero-invested {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-mute);
+  letter-spacing: 0.04em;
+  margin-top: 4px;
+}
+
+/* ── ROI badge on set list cards ───────────────────────────── */
+.sl-roi {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  margin-top: 3px;
+  letter-spacing: 0.02em;
+}
+.sl-roi.up   { color: var(--up); }
+.sl-roi.down { color: var(--down); }
+
+/* ── Portfolio text search ─────────────────────────────────── */
+.search-toggle-btn { margin-left: auto; flex-shrink: 0; }
+.portfolio-search-wrap {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 240ms var(--ease), opacity 200ms;
+  opacity: 0;
+  margin-bottom: 0;
+}
+.portfolio-search-wrap.open {
+  max-height: 80px;
+  opacity: 1;
+  margin-bottom: 10px;
+}
+
+/* ── Manage tab — condition & notes ────────────────────────── */
+.condition-sel {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1.5px solid var(--line-soft);
+  border-radius: var(--r-1);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 14px;
+  appearance: auto;
+}
+.notes-ta {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1.5px solid var(--line-soft);
+  border-radius: var(--r-1);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 14px;
+  resize: vertical;
+  min-height: 72px;
+  line-height: 1.5;
+}
+.notes-ta:focus, .condition-sel:focus { outline: 2px solid var(--lego-yellow); border-color: transparent; }
+
+/* ── P&L row ───────────────────────────────────────────────── */
+.pl-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-soft);
+  font-size: 12px;
+  color: var(--ink-mute);
+}
+.pl-item strong { font-family: var(--mono); font-weight: 600; }
+.pl-item.up strong { color: var(--up); }
+.pl-item.down strong { color: var(--down); }
+.pl-sep { color: var(--line-soft); }
+
+/* ── Onboarding empty state ────────────────────────────────── */
+.onboarding-card {
+  background: var(--surface);
+  border-radius: var(--r-3);
+  border: 1.5px solid var(--line-soft);
+  padding: 24px 22px 20px;
+  box-shadow: var(--shadow-2);
+}
+.onboarding-art { text-align: center; margin-bottom: 14px; }
+.onboarding-title { font-family: var(--serif); font-weight: 500; font-size: 22px; letter-spacing: -0.018em; margin: 0 0 4px; }
+.onboarding-sub { font-size: 13px; color: var(--ink-mute); margin: 0 0 16px; }
+.onboarding-steps { display: flex; flex-direction: column; gap: 2px; }
+.onboarding-step {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 12px;
+  border-radius: var(--r-2);
+  background: var(--surface-2);
+  text-decoration: none;
+  color: var(--ink);
+  transition: background var(--dur-fast);
+}
+.onboarding-step:active { background: var(--surface-3); }
+.onboarding-step-icon { width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--accent); border-radius: 10px; color: var(--ink); }
+.onboarding-step-icon svg { width: 18px; height: 18px; }
+.onboarding-step-title { font-weight: 600; font-size: 14px; }
+.onboarding-step-desc { font-size: 12px; color: var(--ink-mute); margin-top: 1px; }
+.onboarding-step-chev { margin-left: auto; color: var(--ink-faint); }
+.onboarding-step-chev svg { width: 16px; height: 16px; }
+
+/* ── Photo preview overlay ─────────────────────────────────── */
+.photo-preview-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  z-index: 10;
+  padding: 24px;
+}
+.photo-preview-img {
+  max-width: 100%;
+  max-height: 60vh;
+  border-radius: var(--r-2);
+  object-fit: contain;
+}
+.photo-preview-actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  max-width: 360px;
+}
+.photo-retake-btn {
+  flex: 1;
+  padding: 13px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: var(--r-full);
+  background: transparent;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--sans);
+  cursor: pointer;
+}
+.photo-confirm-btn {
+  flex: 2;
+  padding: 13px;
+  border: none;
+  border-radius: var(--r-full);
+  background: var(--lego-red);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--sans);
+  cursor: pointer;
+}
+
+/* ── Camera permission dialog ──────────────────────────────── */
+.cam-perm-dialog {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: flex-end;
+  z-index: 20;
+}
+.cam-perm-inner {
+  background: var(--surface);
+  border-radius: var(--r-3) var(--r-3) 0 0;
+  padding: 28px 22px 36px;
+  width: 100%;
+  text-align: center;
+}
+.cam-perm-icon { font-size: 42px; margin-bottom: 12px; }
+.cam-perm-inner h3 { font-family: var(--serif); font-size: 22px; font-weight: 500; margin: 0 0 10px; }
+.cam-perm-inner p { font-size: 14px; color: var(--ink-mute); line-height: 1.55; margin: 0 0 20px; }
+
+/* ── Wishlist price sheet ───────────────────────────────────── */
+/* (uses existing .ios-sheet pattern) */
+
+/* ── font-display optional ─────────────────────────────────── */
+@font-face { font-family: "Fraunces"; font-display: optional; src: local("Fraunces"); }
+@font-face { font-family: "Geist";    font-display: optional; src: local("Geist"); }
+
+/* ── Small-phone breakpoint additions ──────────────────────── */
+@media (max-width: 360px) {
+  .h-title, .detail-title { font-size: 20px; }
+  .stat .v { font-size: 22px; }
+  .set-name, .add-result-name { font-size: 13px; }
+  .detail-tab { font-size: 12px; padding: 10px 8px; }
+  .hero-value span:last-child { font-size: 38px; }
+}
+
+/* ── Dark mode ──────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:           #1A1A1F;
+    --bg-deep:      #111115;
+    --surface:      #232329;
+    --surface-2:    #2C2C34;
+    --surface-3:    #35353F;
+    --line:         rgba(255,255,255,0.10);
+    --line-soft:    rgba(255,255,255,0.08);
+    --line-strong:  rgba(255,255,255,0.18);
+
+    --ink:          #F2EDE3;
+    --ink-soft:     #D8D0C4;
+    --ink-mute:     #9490A0;
+    --ink-faint:    #5E5A6A;
+
+    --accent-pale:  rgba(255,215,0,0.08);
+    --up-pale:      rgba(47,109,67,0.15);
+    --up-soft:      rgba(47,109,67,0.20);
+    --down-soft:    rgba(165,50,36,0.20);
+
+    --shadow-1: 2px 2px 0 rgba(0,0,0,0.4);
+    --shadow-2: 4px 4px 0 rgba(0,0,0,0.4);
+    --shadow-3: 5px 5px 0 rgba(0,0,0,0.35);
+    --shadow-4: 6px 6px 0 rgba(0,0,0,0.30);
+  }
+
+  body::before { opacity: 0.15; }
+
+  .brand-name { color: var(--ink); }
+  .nav-tab    { color: var(--ink-mute); }
+  .nav-tab.active { color: var(--lego-red); }
+  .bottom-nav { background: var(--surface); border-top-color: var(--line); }
+  .card       { background: var(--surface); border-color: var(--line-soft); }
+  .chip       { background: var(--surface-2); border-color: var(--line-soft); color: var(--ink-soft); }
+  .chip.active { background: var(--ink); color: var(--bg); }
+  .hero       { background: var(--surface); }
+  .hero-label { color: var(--ink-mute); }
+  .detail-hero-bg { filter: brightness(0.55); }
+  .scan-overlay { background: rgba(0,0,0,0.96); }
+  .add-result { background: var(--surface); border-color: var(--line-soft); }
+  .condition-sel, .notes-ta { background: var(--surface-2); color: var(--ink); border-color: var(--line); }
+  .onboarding-card { background: var(--surface); border-color: var(--line-soft); }
+  .onboarding-step { background: var(--surface-2); }
+  .sort-pill  { background: var(--surface-2); color: var(--ink); border-color: var(--line-soft); }
+  input, textarea, select { background: var(--surface-2); color: var(--ink); }
+}

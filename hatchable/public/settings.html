@@ -291,6 +291,40 @@
     </div>
   </div>
 
+  <!-- CSV import / export section -->
+  <div class="section-eyebrow">Your collection</div>
+  <div class="action-card">
+    <h3>Export collection</h3>
+    <p>Download your entire collection as a CSV file for backup or editing in a spreadsheet.</p>
+    <a class="primary-btn" id="exportCsvBtn" href="#" style="display:inline-flex;align-items:center;gap:8px;text-decoration:none">
+      <svg fill="none" viewBox="0 0 20 20" stroke="currentColor" stroke-width="1.8" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M10 3v10M6 13l4 4 4-4M3 17h14"/></svg>
+      Download CSV
+    </a>
+  </div>
+
+  <div class="action-card">
+    <h3>Import collection from CSV</h3>
+    <p>Upload a CSV file exported from Brickvault, Brickset, or BrickLink. Existing sets are updated; new sets are added. Columns: <code>set_num, quantity, purchase_price, condition, notes, purchased_at</code>.</p>
+    <div id="csvImportIdle">
+      <label class="primary-btn" id="csvImportLabel" style="cursor:pointer;display:inline-flex;align-items:center;gap:8px">
+        <svg fill="none" viewBox="0 0 20 20" stroke="currentColor" stroke-width="1.8" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M10 13V3M6 7l4-4 4 4M3 17h14"/></svg>
+        Choose CSV file
+        <input type="file" accept=".csv,text/csv" id="csvFileInput" style="display:none">
+      </label>
+    </div>
+    <div id="csvImportResult" hidden></div>
+  </div>
+
+  <!-- Minifig catalog import -->
+  <div class="action-card">
+    <h3>Import minifig catalog</h3>
+    <p>Pull the Rebrickable minifig catalog (~20,000+ figures) into the Blind Bag page. Safe to re-run — existing figures are updated, not duplicated.</p>
+    <div id="minifigImportIdle">
+      <button class="primary-btn" id="startMinifigImportBtn">Import minifig catalog</button>
+    </div>
+    <div id="minifigImportResult" hidden></div>
+  </div>
+
   <!-- Auth / accounts section -->
   <div class="section-eyebrow">Accounts &amp; sign-in</div>
   <div class="action-card">
@@ -482,6 +516,86 @@ function finishImport(success, run) {
 }
 
 $("#startImportBtn").addEventListener("click", startImport);
+
+// Minifig catalog import
+document.getElementById("startMinifigImportBtn").addEventListener("click", async () => {
+  const btn = document.getElementById("startMinifigImportBtn");
+  const result = document.getElementById("minifigImportResult");
+  btn.disabled = true;
+  btn.textContent = "Importing…";
+  result.hidden = true;
+  try {
+    const r = await fetch(API + "/admin/import-minifigs", { method: "POST", credentials: "same-origin" });
+    const data = await r.json().catch(() => ({}));
+    if (r.ok && data.ok) {
+      result.hidden = false;
+      result.innerHTML = `<div class="note" style="background:#EFF5EE;color:#1F4D2E;margin-top:12px">
+        <strong>Done:</strong> ${(data.imported || 0).toLocaleString()} minifigs imported, ${(data.skipped || 0).toLocaleString()} skipped.
+      </div>`;
+      toast("Minifig catalog imported", "success");
+      btn.textContent = "Re-import minifig catalog";
+    } else {
+      throw new Error(data.error || "Import failed");
+    }
+  } catch (err) {
+    result.hidden = false;
+    result.innerHTML = `<div class="note" style="margin-top:12px"><strong>Error:</strong> ${err.message}</div>`;
+    toast(err.message, "error");
+    btn.textContent = "Import minifig catalog";
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+// CSV export
+document.getElementById("exportCsvBtn").addEventListener("click", (e) => {
+  e.preventDefault();
+  const link = document.createElement("a");
+  link.href = API + "/collection/export";
+  link.download = "";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  toast("Downloading…");
+});
+
+// CSV import
+document.getElementById("csvFileInput").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const label = document.getElementById("csvImportLabel");
+  const result = document.getElementById("csvImportResult");
+  label.style.opacity = "0.5";
+  label.style.pointerEvents = "none";
+  result.hidden = true;
+  try {
+    const text = await file.text();
+    const r = await fetch(API + "/collection/import", {
+      method: "POST",
+      headers: { "Content-Type": "text/csv" },
+      body: text,
+      credentials: "same-origin",
+    });
+    const data = await r.json().catch(() => ({}));
+    if (r.ok) {
+      result.hidden = false;
+      result.innerHTML = `<div class="note" style="background:#EFF5EE;color:#1F4D2E;margin-top:12px">
+        <strong>Import complete:</strong> ${data.imported || 0} sets imported, ${data.skipped || 0} skipped.
+      </div>`;
+      toast("Import complete", "success");
+    } else {
+      throw new Error(data.error || "Import failed");
+    }
+  } catch (err) {
+    result.hidden = false;
+    result.innerHTML = `<div class="note" style="margin-top:12px"><strong>Error:</strong> ${err.message}</div>`;
+    toast(err.message, "error");
+  } finally {
+    label.style.opacity = "";
+    label.style.pointerEvents = "";
+    e.target.value = "";
+  }
+});
 
 loadStatus();
 </script>
