@@ -13,7 +13,7 @@ import { db } from "hatchable";
 import { fetchGzippedCsv } from "../_lib/csv_import.js";
 import { formulaValuation } from "../_lib/valuation.js";
 
-export const access = "viewer";    // personal-mode auth gates this
+export const access = "admin";     // project owner only
 export const methods = ["POST"];
 
 const THEMES_URL = "https://cdn.rebrickable.com/media/downloads/themes.csv.gz";

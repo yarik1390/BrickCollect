@@ -1,7 +1,7 @@
 {
   "name": "Brickvault",
   "short_name": "Brickvault",
-  "description": "Premium LEGO portfolio tracker",
+  "description": "Premium LEGO portfolio tracker — catalog, AI pricing, camera scanning.",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
@@ -13,6 +13,26 @@
       "type": "image/svg+xml",
       "sizes": "any",
       "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "label": "Brickvault portfolio view"
     }
   ]
 }

@@ -1549,3 +1549,17 @@ window.addEventListener("DOMContentLoaded", route);
   }, { passive: true });
 })();
 if (document.readyState !== "loading") route();
+
+// =============================================================
+// Offline detection
+// =============================================================
+(function () {
+  const banner = document.getElementById("offlineBanner");
+  if (!banner) return;
+  function sync() {
+    banner.classList.toggle("visible", !navigator.onLine);
+  }
+  window.addEventListener("online",  sync);
+  window.addEventListener("offline", sync);
+  sync();
+})();

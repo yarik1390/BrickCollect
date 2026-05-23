@@ -1959,3 +1959,35 @@ img { display: block; max-width: 100%; }
   .detail-title { font-size: 26px; }
   .market-card .big { font-size: 38px; }
 }
+
+/* ── Accessibility ─────────────────────────────────────────── */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  padding: 8px 16px;
+  background: var(--lego-red);
+  color: #fff;
+  font-weight: 600;
+  z-index: 9999;
+  text-decoration: none;
+  border-radius: 0 0 8px 0;
+}
+.skip-link:focus { top: 0; }
+
+/* ── Offline banner ────────────────────────────────────────── */
+.offline-banner {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 10px 16px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+  z-index: 1000;
+}
+.offline-banner.visible { display: block; }

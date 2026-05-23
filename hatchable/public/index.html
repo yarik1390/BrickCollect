@@ -2,14 +2,27 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5.0">
 <meta name="theme-color" content="#F5F1E8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Brickvault">
 <meta name="description" content="Brickvault — a premium LEGO portfolio tracker.">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://cdn.rebrickable.com; frame-ancestors 'none';">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Brickvault — LEGO Portfolio Tracker">
+<meta property="og:description" content="Track, value, and forecast your LEGO collection. AI-powered pricing and camera scanning.">
+<meta property="og:image" content="/icon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Brickvault — LEGO Portfolio Tracker">
+<meta name="twitter:description" content="Track, value, and forecast your LEGO collection.">
+<meta name="twitter:image" content="/icon-512.png">
+
 <link rel="manifest" href="/manifest.json">
-<link rel="apple-touch-icon" href="/icon.svg">
+<link rel="apple-touch-icon" href="/icon-192.png">
 <title>Brickvault — collection portfolio</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -21,7 +34,24 @@
 </head>
 <body>
 
+<a href="#main-content" class="skip-link">Skip to content</a>
+<div id="offlineBanner" class="offline-banner" role="status" aria-live="polite">
+  You're offline — showing cached data
+</div>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Brickvault",
+  "description": "Premium LEGO portfolio tracker with AI-powered pricing and camera scanning.",
+  "applicationCategory": "LifestyleApplication",
+  "operatingSystem": "Any"
+}
+</script>
+
 <div id="app">
+  <main id="main-content">
   <div id="root">
     <div class="page">
       <div class="skel card mb-12" style="height:180px"></div>
@@ -32,24 +62,25 @@
       </div>
     </div>
   </div>
+  </main>
 </div>
 
 <!-- Bottom nav -->
-<nav class="bottom-nav" id="nav">
+<nav class="bottom-nav" id="nav" aria-label="Main navigation">
   <a href="#/" class="nav-tab" data-route="/">
-    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13l9-9 9 9M5 11v9a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1v-9"/></svg>
+    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13l9-9 9 9M5 11v9a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1v-9"/></svg>
     Portfolio
   </a>
   <a href="#/add" class="nav-tab" data-route="/add">
-    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="7" stroke-linecap="round" stroke-linejoin="round"/><path stroke-linecap="round" d="M21 21l-4.35-4.35"/></svg>
+    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="7" stroke-linecap="round" stroke-linejoin="round"/><path stroke-linecap="round" d="M21 21l-4.35-4.35"/></svg>
     Catalog
   </a>
   <a href="#/pile" class="nav-tab" data-route="/pile">
-    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8.5l9-5 9 5-9 5-9-5zM3 13l9 5 9-5M3 17l9 5 9-5"/></svg>
+    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8.5l9-5 9 5-9 5-9-5zM3 13l9 5 9-5M3 17l9 5 9-5"/></svg>
     Pile
   </a>
   <a href="#/blind" class="nav-tab" data-route="/blind">
-    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M6 7h12l-1 13a2 2 0 01-2 2H9a2 2 0 01-2-2L6 7zM9 7V5a3 3 0 016 0v2"/></svg>
+    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M6 7h12l-1 13a2 2 0 01-2 2H9a2 2 0 01-2-2L6 7zM9 7V5a3 3 0 016 0v2"/></svg>
     Blind Bag
   </a>
 </nav>

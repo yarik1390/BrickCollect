@@ -10,11 +10,15 @@
 import { db } from "hatchable";
 import { rebrickableEnabled, getSet, resolveThemeName } from "../_lib/rebrickable.js";
 import { aiValuation } from "../_lib/valuation.js";
+import { checkRateLimit } from "../_lib/rate_limit.js";
+import { getCallerId } from "../_lib/caller.js";
 
 export const access = "viewer";
 export const methods = ["GET"];
 
 const CACHE_DAYS = 7;
+// AI valuation upgrades cost tokens; cap at 60 per user per hour.
+const VALUATION_LIMIT = 60;
 
 export default async function (req, res) {
   const setNum = req.params.setnum;
@@ -30,6 +34,12 @@ export default async function (req, res) {
   //    cheap formula one from the bulk import. Upgrade just the
   //    valuation with Claude, keep the data. No Rebrickable call.
   if (cached && needsValuationUpgrade(cached) && !needsDataRefresh(cached)) {
+    const userId = getCallerId(req);
+    const ok = await checkRateLimit(userId || "anon", "set-valuation", VALUATION_LIMIT);
+    if (!ok) {
+      // Serve the formula valuation rather than erroring — still useful.
+      return res.json({ set: cached, source: "cache", rate_limited: true });
+    }
     try {
       const val = await aiValuation(cached);
       await db.query(

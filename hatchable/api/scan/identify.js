@@ -8,15 +8,29 @@
 
 import { ai, db } from "hatchable";
 import { rebrickableEnabled, getSet, resolveThemeName } from "../_lib/rebrickable.js";
+import { checkRateLimit } from "../_lib/rate_limit.js";
+import { getCallerId } from "../_lib/caller.js";
 
 export const access = "viewer";
 export const methods = ["POST"];
 
+// Vision calls are expensive; cap at 20 image scans per user per hour.
+const IMAGE_LIMIT = 20;
+
 export default async function (req, res) {
   const { mode = "image", image, barcode } = req.body || {};
 
+  if (mode === "image") {
+    const userId = getCallerId(req);
+    const ok = await checkRateLimit(userId || "anon", "scan-identify", IMAGE_LIMIT);
+    if (!ok) {
+      return res.status(429).json({ error: "Rate limit exceeded. Try again next hour." });
+    }
+  }
+
   if (mode === "barcode") return identifyByBarcode(res, barcode);
   if (mode === "image")   return identifyByImage(res, image);
+
 
   return res.status(400).json({ error: "unknown mode" });
 }
