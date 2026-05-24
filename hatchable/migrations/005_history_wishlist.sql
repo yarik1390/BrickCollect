@@ -3,16 +3,15 @@
 
 -- 1) Portfolio snapshots (nightly) ------------------------------------
 CREATE TABLE IF NOT EXISTS portfolio_snapshots (
-  id          SERIAL       PRIMARY KEY,
-  user_id     TEXT         NOT NULL,
-  snapshot_at TIMESTAMPTZ  NOT NULL DEFAULT now(),
-  total_value NUMERIC(12,2) NOT NULL,
-  total_paid  NUMERIC(12,2),
-  set_count   INTEGER      NOT NULL
+  id            SERIAL        PRIMARY KEY,
+  user_id       TEXT          NOT NULL,
+  snapshot_date DATE          NOT NULL DEFAULT CURRENT_DATE,
+  snapshot_at   TIMESTAMPTZ   NOT NULL DEFAULT now(),
+  total_value   NUMERIC(12,2) NOT NULL,
+  total_paid    NUMERIC(12,2),
+  set_count     INTEGER       NOT NULL,
+  UNIQUE (user_id, snapshot_date)
 );
--- One snapshot per user per calendar day (UTC)
-CREATE UNIQUE INDEX IF NOT EXISTS portfolio_snapshots_daily_user
-  ON portfolio_snapshots (user_id, date_trunc('day', snapshot_at));
 CREATE INDEX IF NOT EXISTS portfolio_snapshots_user_time
   ON portfolio_snapshots (user_id, snapshot_at DESC);
 

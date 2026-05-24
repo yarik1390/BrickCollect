@@ -1,22 +1,16 @@
-// POST /api/jobs/snapshot-portfolios
-// Cron: runs daily at 02:00 UTC. Writes one portfolio_snapshots row per
-// active user, skipping users who already have a snapshot today.
-// Idempotent via the UNIQUE index on (user_id, date_trunc('day', snapshot_at)).
-
 import { db } from "hatchable";
 
 export const access = "scheduler";
 export const methods = ["POST"];
 
 export default async function (req, res) {
-  // Find users who don't yet have today's snapshot
   const { rows: users } = await db.query(
     `SELECT DISTINCT c.user_id
        FROM user_collection c
       WHERE c.deleted_at IS NULL
         AND c.user_id NOT IN (
           SELECT user_id FROM portfolio_snapshots
-           WHERE snapshot_at >= date_trunc('day', now())
+           WHERE snapshot_date = CURRENT_DATE
         )`
   );
 
@@ -39,9 +33,9 @@ export default async function (req, res) {
       if (set_count === 0) continue;
 
       await db.query(
-        `INSERT INTO portfolio_snapshots (user_id, total_value, total_paid, set_count)
-         VALUES ($1, $2, $3, $4)
-         ON CONFLICT (user_id, date_trunc('day', snapshot_at)) DO NOTHING`,
+        `INSERT INTO portfolio_snapshots (user_id, snapshot_date, total_value, total_paid, set_count)
+         VALUES ($1, CURRENT_DATE, $2, $3, $4)
+         ON CONFLICT (user_id, snapshot_date) DO NOTHING`,
         [user_id, total_value, total_paid, set_count]
       );
       snapped++;
