@@ -2099,10 +2099,10 @@ function paintMe() {
       </div>
 
       <div class="me-stats-row">
-        <div class="me-stat"><div class="me-stat-v">${setCount}</div><div class="me-stat-k">Sets</div></div>
-        <div class="me-stat"><div class="me-stat-v">${fmtMoneyShort(totalValue)}</div><div class="me-stat-k">Value</div></div>
-        <div class="me-stat"><div class="me-stat-v">${fmtMoneyShort(totalPaid)}</div><div class="me-stat-k">Invested</div></div>
-        <div class="me-stat ${netRoi >= 0 ? "up" : "down"}"><div class="me-stat-v">${netRoi >= 0 ? "+" : ""}${netRoi.toFixed(1)}%</div><div class="me-stat-k">ROI</div></div>
+        <div class="me-stat"><div class="me-stat-value">${setCount}</div><div class="me-stat-label">Sets</div></div>
+        <div class="me-stat"><div class="me-stat-value">${fmtMoneyShort(totalValue)}</div><div class="me-stat-label">Value</div></div>
+        <div class="me-stat"><div class="me-stat-value">${fmtMoneyShort(totalPaid)}</div><div class="me-stat-label">Invested</div></div>
+        <div class="me-stat"><div class="me-stat-value ${netRoi >= 0 ? "up" : "down"}">${netRoi >= 0 ? "+" : ""}${netRoi.toFixed(1)}%</div><div class="me-stat-label">ROI</div></div>
       </div>
 
       ${performers.length > 0 ? `
@@ -2112,9 +2112,9 @@ function paintMe() {
             <a class="perf-row" href="#/set/${encodeURIComponent(item.set_num)}">
               <span class="perf-rank">#${i+1}</span>
               <img class="perf-img" src="${item.image_url}" alt="${item.name}" onerror="this.style.opacity=0.1">
-              <div class="perf-body">
+              <div class="perf-info">
                 <div class="perf-name">${item.name}</div>
-                <div class="perf-meta">${item.theme || "—"}</div>
+                <div class="perf-num">${item.theme || "—"}</div>
               </div>
               <div class="perf-roi ${item.roi >= 0 ? "up" : "down"}">${item.roi >= 0 ? "+" : ""}${item.roi.toFixed(1)}%</div>
             </a>
