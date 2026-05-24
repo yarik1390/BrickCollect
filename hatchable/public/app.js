@@ -1614,7 +1614,7 @@ async function renderBlind() {
       <div class="fig-card fig-${f.rarity}">
         <span class="rarity rarity-${f.rarity}">${f.rarity}</span>
         <div class="fig-img-wrap">
-          <img src="${f.image_url}" alt="${f.name}" onerror="this.style.opacity=0">
+          <img src="${f.image_url}" alt="${f.name}" onerror="this.style.display='none'">
         </div>
         <div class="name">${f.name}</div>
         <div class="muted text-xs mb-4">${f.series}</div>

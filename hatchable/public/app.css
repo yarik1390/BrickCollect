@@ -2631,3 +2631,82 @@ img:not([src]) {
   animation: spin 0.7s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ============================================================
+   Round 3 fixes: Me page icons, detail page, blind bag
+   ============================================================ */
+
+/* Me page — constrain inline SVG icons to 20px */
+.me-link-row > svg { width: 20px; height: 20px; flex-shrink: 0; color: var(--ink-mute); }
+.me-link-label { flex: 1; font-size: 15px; }
+/* Hide file input cross-browser — position:absolute beats display:none on mobile Chrome */
+.me-link-row input[type="file"] {
+  position: absolute; width: 0; height: 0;
+  opacity: 0; overflow: hidden; pointer-events: none;
+}
+
+/* Detail hero — Hatchable HTML structure (overlay / back / content / img) */
+.detail-hero-overlay {
+  position: absolute; inset: 0; z-index: 1;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.68) 55%, rgba(0,0,0,0.90) 100%);
+}
+.detail-back {
+  position: absolute; top: calc(env(safe-area-inset-top, 0px) + 12px); left: 14px; z-index: 4;
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(255,255,255,0.18); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border: 1.5px solid rgba(255,255,255,0.28); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+}
+.detail-back:active { background: rgba(255,255,255,0.32); }
+.detail-back svg { width: 20px; height: 20px; }
+.detail-hero-content {
+  position: absolute; bottom: 0; left: 0; right: 0; z-index: 2;
+  display: flex; align-items: flex-end; gap: 14px;
+  padding: 0 18px 18px;
+}
+.detail-img {
+  width: 80px; height: 68px;
+  object-fit: contain; flex-shrink: 0;
+  filter: drop-shadow(0 4px 20px rgba(0,0,0,0.55));
+}
+.detail-eyebrow {
+  font-size: 11px; color: rgba(255,255,255,0.68);
+  letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 5px;
+}
+.detail-hero-content .detail-title { color: #fff; font-size: 20px; line-height: 1.2; }
+
+/* Detail INFO tab content */
+.detail-section { padding: 4px 0 32px; }
+.stat-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px; margin-bottom: 16px;
+}
+.stat-grid .stat {
+  background: var(--surface); border: 1.5px solid var(--line-soft);
+  border-radius: var(--r-card); padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.stat-grid .stat .k {
+  font-size: 10px; color: var(--ink-mute);
+  text-transform: uppercase; letter-spacing: 0.07em;
+}
+.stat-grid .stat .v { font-size: 15px; font-weight: 600; color: var(--ink); }
+.detail-actions {
+  display: flex; align-items: center; gap: 10px; margin-top: 4px;
+}
+.detail-actions .add-btn { flex: 1; }
+.detail-actions .icon-btn { flex-shrink: 0; }
+.detail-actions .icon-btn.active svg { color: var(--lego-red); fill: var(--lego-red); }
+.qty-row {
+  display: flex; align-items: center; gap: 14px; flex: 1;
+  background: var(--surface); border: 1.5px solid var(--line-soft);
+  border-radius: var(--r-full); padding: 8px 16px;
+}
+.qty-val { font-size: 18px; font-weight: 700; min-width: 24px; text-align: center; }
+.qty-btn {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1.5px solid var(--line); background: var(--surface-2);
+  font-size: 20px; line-height: 1; display: flex; align-items: center; justify-content: center;
+  color: var(--ink);
+}
+.qty-btn:active { background: var(--surface-3); }
