@@ -2090,3 +2090,21 @@ function route() {
     const tabArg = parts[3] ? { tab: parts[3] } : {};
     return renderSetDetail(setNum, tabArg);
   }
+  // 404 fallback
+  $("#root").innerHTML = `<div class="page"><p>Page not found.</p></div>`;
+}
+
+window.addEventListener("hashchange", route);
+window.addEventListener("load", route);
+
+// Swipe-back gesture
+let swipeStartX = 0;
+document.addEventListener("touchstart", e => {
+  swipeStartX = e.touches[0].clientX;
+}, { passive: true });
+document.addEventListener("touchend", e => {
+  const dx = e.changedTouches[0].clientX - swipeStartX;
+  if (dx > 60 && swipeStartX < 44 && window.history.length > 1) {
+    history.back();
+  }
+}, { passive: true });
