@@ -20,6 +20,7 @@ const state = {
     catalogSort: "value_desc",
     catalogYear: "all",
     catalogRetired: false,
+    wishlistSort: "recent",
   },
   toastTimer: null,
   detail: { tab: "info" },
@@ -875,6 +876,9 @@ function paintSetDetail(set, entry) {
         <button class="detail-tab ${tab === "forecast" ? "active" : ""}" data-tab="forecast">Forecast</button>
         <button class="detail-tab ${tab === "manage" ? "active" : ""}" data-tab="manage">Manage</button>
       </div>
+      <div class="tab-dots">
+        ${["info", "forecast", "manage"].map(t => `<span class="tab-dot${tab === t ? " active" : ""}"></span>`).join("")}
+      </div>
 
       <div class="detail-tab-panel ${tab === "info" ? "active" : ""}" id="tabInfo">
         <div class="card market-card">
@@ -999,6 +1003,7 @@ function paintSetDetail(set, entry) {
       dot: true, scrubLabelFor: (v) => fmtMoneyShort(v),
     });
   }
+  if (tab === "forecast") { window._currentSet = set; maybePaintForecastChart && maybePaintForecastChart(); }
 
   // Tab switching
   $$(".detail-tab").forEach(btn => {
@@ -1434,14 +1439,38 @@ function paintCatalogResults() {
     });
   }
 
+  const activeFilters = [];
+  if (state.filter.catalogYear && state.filter.catalogYear !== "all") {
+    activeFilters.push({ label: `Year: ${state.filter.catalogYear}`, key: "catalogYear" });
+  }
+  if (state.filter.catalogRetired) {
+    activeFilters.push({ label: "Retired only", key: "catalogRetired" });
+  }
+  const activeFiltersHTML = activeFilters.length > 0
+    ? `<div class="active-filters-row">${activeFilters.map(f =>
+        `<span class="active-filter-chip" data-filter-key="${f.key}">${f.label} ×</span>`
+      ).join("")}</div>`
+    : "";
+
   wrap.innerHTML = `
     ${incomplete ? `<div class="search-incomplete-banner">⚠ Live catalog search unavailable — showing local results only.</div>` : ""}
+    ${activeFiltersHTML}
     <div class="results-count">${filtered.length} set${filtered.length !== 1 ? "s" : ""}</div>
     <div class="results-grid" id="catalogGrid">
       ${visible.map(cardHTML).join("")}
     </div>
     ${hasMore ? `<div id="catalogSentinel" class="loading-more"><span class="spinner"></span></div>` : ""}
   `;
+
+  wrap.querySelectorAll(".active-filter-chip").forEach(chip => {
+    chip.addEventListener("click", () => {
+      const key = chip.dataset.filterKey;
+      if (key === "catalogYear") { state.filter.catalogYear = "all"; const sel = document.getElementById("yearSelect"); if (sel) sel.value = "all"; }
+      if (key === "catalogRetired") { state.filter.catalogRetired = false; const btn = document.getElementById("retiredChip"); if (btn) btn.classList.remove("active"); }
+      state.catalogPage = 1;
+      paintCatalogResults();
+    });
+  });
 
   const grid = $("#catalogGrid");
   if (grid) wireCards(grid);
@@ -1620,7 +1649,8 @@ async function renderBlind() {
       <div class="fig-card fig-${f.rarity}">
         <span class="rarity rarity-${f.rarity}">${f.rarity}</span>
         <div class="fig-img-wrap">
-          <img src="${f.image_url}" alt="${f.name}" onerror="this.style.display='none'">
+          <img src="${f.image_url}" alt="${f.name}" onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.style.display='flex')">
+          <span class="fig-img-placeholder">🧱</span>
         </div>
         <div class="name">${f.name}</div>
         <div class="muted text-xs mb-4">${f.series}</div>
@@ -2109,7 +2139,7 @@ function paintMe() {
         <div class="me-stat"><div class="me-stat-value">${setCount}</div><div class="me-stat-label">Sets</div></div>
         <div class="me-stat"><div class="me-stat-value">${fmtMoneyShort(totalValue)}</div><div class="me-stat-label">Value</div></div>
         <div class="me-stat"><div class="me-stat-value">${fmtMoneyShort(totalPaid)}</div><div class="me-stat-label">Invested</div></div>
-        <div class="me-stat"><div class="me-stat-value ${netRoi >= 0 ? "up" : "down"}">${netRoi >= 0 ? "+" : ""}${netRoi.toFixed(1)}%</div><div class="me-stat-label">ROI</div></div>
+        <div class="me-stat" style="${totalPaid > 0 ? `background:var(${netRoi >= 0 ? "--up-pale" : "--down-soft"})` : ""}"><div class="me-stat-value ${netRoi >= 0 ? "up" : "down"}">${netRoi >= 0 ? "+" : ""}${netRoi.toFixed(1)}%</div><div class="me-stat-label">ROI</div></div>
       </div>
 
       ${performers.length > 0 ? `
@@ -2247,7 +2277,25 @@ async function renderWishlist() {
 
 function paintWishlist() {
   const root = $("#root");
-  const items = state.wishlist || [];
+  const rawItems = state.wishlist || [];
+
+  const sortKey = state.filter.wishlistSort || "recent";
+  const items = [...rawItems].sort((a, b) => {
+    if (sortKey === "value_desc") return (b.current_value || 0) - (a.current_value || 0);
+    if (sortKey === "target_gap") {
+      const gapA = a.target_price && a.current_value ? (a.current_value - a.target_price) / a.target_price : Infinity;
+      const gapB = b.target_price && b.current_value ? (b.current_value - b.target_price) / b.target_price : Infinity;
+      return gapA - gapB;
+    }
+    // "recent" — keep insertion order (descending id)
+    return (b.id || 0) - (a.id || 0);
+  });
+
+  const sortChips = [
+    { key: "recent", label: "Recent" },
+    { key: "value_desc", label: "Value ↓" },
+    { key: "target_gap", label: "Closest to target" },
+  ];
 
   root.innerHTML = `
     <div class="page">
@@ -2257,13 +2305,16 @@ function paintWishlist() {
         <div></div>
       </div>
 
-      ${items.length === 0 ? `
+      ${rawItems.length === 0 ? `
         <div class="empty">
           <h3>Nothing on your list</h3>
           <p>Tap the ${I.heart} on any set to add it here. You can also set a price alert.</p>
           <a href="#/add" class="add-btn">${I.search} Browse catalog</a>
         </div>
       ` : `
+        <div class="filter-row" style="margin-bottom:12px">
+          ${sortChips.map(c => `<button class="chip${sortKey === c.key ? " active" : ""}" data-wl-sort="${c.key}">${c.label}</button>`).join("")}
+        </div>
         <div class="wishlist-list">
           ${items.map(w => {
             const gap = w.target_price ? pct(w.current_value, w.target_price) - 100 : null;
@@ -2321,6 +2372,13 @@ function paintWishlist() {
         paintWishlist();
         toast("Removed from wishlist");
       } catch (err) { toast(err.message, "error"); }
+    });
+  });
+
+  $$("[data-wl-sort]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      state.filter.wishlistSort = btn.dataset.wlSort;
+      paintWishlist();
     });
   });
 }

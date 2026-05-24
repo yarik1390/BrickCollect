@@ -2728,3 +2728,35 @@ img:not([src]) {
   color: var(--ink);
 }
 .qty-btn:active { background: var(--surface-3); }
+
+/* ── Tab position dots ────────────────────────────────────── */
+.tab-dots {
+  display: flex; gap: 6px; justify-content: center;
+  padding: 6px 0 2px;
+}
+.tab-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--line-soft);
+  transition: background var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+.tab-dot.active { background: var(--lego-red); transform: scale(1.25); }
+
+/* ── Active filter chips (catalog) ───────────────────────── */
+.active-filters-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.active-filter-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 10px; border-radius: var(--r-full);
+  font-size: 12px; font-weight: 600;
+  background: var(--lego-yellow); color: var(--ink);
+  border: 1.5px solid var(--line); box-shadow: var(--shadow-1);
+  cursor: pointer;
+}
+.active-filter-chip:hover { background: var(--lego-yellow-dark); transform: translate(-1px,-1px); box-shadow: var(--shadow-2); }
+
+/* ── Blind bag image fallback ─────────────────────────────── */
+.fig-img-placeholder {
+  display: none; width: 100%; aspect-ratio: 1;
+  align-items: center; justify-content: center;
+  font-size: 28px; border-radius: var(--r-1);
+  background: var(--surface-2);
+}
