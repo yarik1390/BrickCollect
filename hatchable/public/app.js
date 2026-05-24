@@ -528,7 +528,13 @@ function paintPortfolio() {
     </div>
   `;
 
-  if (!isEmpty) {
+  // Hide hero chart section when no data
+  if (isEmpty) {
+    const heroChart = $("#heroChart");
+    if (heroChart) heroChart.style.display = "none";
+    const segmented = $(".segmented");
+    if (segmented) segmented.style.display = "none";
+  } else {
     renderChart($("#heroChart"), points, {
       w: 360, h: 80, dot: true,
       scrubLabelFor: (v) => fmtMoneyShort(v),
@@ -882,7 +888,7 @@ function paintSetDetail(set, entry) {
             </span>
             <span class="font-mono text-sm muted">${fmtMoney(set.retail_price)}</span>
           </div>
-          <div class="sparkline" id="setChart"></div>
+          <div class="sparkline-wrap" id="setChart" style="height:72px;margin-top:16px"></div>
         </div>
         <div class="stats-grid">
           <div class="stat"><div class="k">Theme</div><div class="v">${set.theme || "—"}</div></div>
@@ -2365,9 +2371,14 @@ function closeScan() {
 document.addEventListener("DOMContentLoaded", () => {
   const cap = $("#scanCapture");
   if (cap) cap.addEventListener("click", capturePhoto);
-  // Haptic feedback on nav tab press
+  // Haptic feedback on nav tab press + scroll-to-top when clicking active tab
   $$(".nav-tab").forEach(t => {
-    t.addEventListener("click", () => haptic("light"));
+    t.addEventListener("click", () => {
+      haptic("light");
+      if (t.classList.contains("active")) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    });
   });
 });
 
