@@ -734,6 +734,7 @@ function showCardQuickActions(card) {
         await removeFromCollection(id);
         await loadPortfolio({ sort: state.filter.sort, q: state.filter.q });
         paintPortfolio();
+        haptic("medium");
         toast("Removed", "success");
       } catch (err) { toast(err.message, "error"); }
     }
@@ -2161,14 +2162,14 @@ function paintMe() {
 
       <div class="me-links-card card tight">
         <a class="me-link-row" href="#/wishlist">
-          ${I.heart}
+          <span style="color:var(--lego-red)">${I.heart}</span>
           <span class="me-link-label">Wishlist</span>
           ${wishCount > 0 ? `<span class="me-link-count">${wishCount}</span>` : ""}
           <span class="me-link-chev">${I.chev}</span>
         </a>
         ${alertCount > 0 ? `
           <button class="me-link-row" id="alertsLinkBtn">
-            ${I.sparkles}
+            <span style="color:var(--lego-yellow)">${I.sparkles}</span>
             <span class="me-link-label">Price alerts</span>
             <span class="me-link-count alert">${alertCount}</span>
             <span class="me-link-chev">${I.chev}</span>
@@ -2360,6 +2361,27 @@ function paintWishlist() {
       if (e.target.closest(".wl-remove")) return;
       location.hash = "#/set/" + encodeURIComponent(card.dataset.setnum);
     });
+
+    // Swipe-left to remove
+    let swipeStartX = 0, swipeStartY = 0;
+    card.addEventListener("touchstart", (e) => {
+      swipeStartX = e.touches[0].clientX;
+      swipeStartY = e.touches[0].clientY;
+    }, { passive: true });
+    card.addEventListener("touchend", async (e) => {
+      const dx = e.changedTouches[0].clientX - swipeStartX;
+      const dy = Math.abs(e.changedTouches[0].clientY - swipeStartY);
+      if (dx < -60 && Math.abs(dx) > dy) {
+        const id = card.dataset.id;
+        haptic("medium");
+        try {
+          await api("/wishlist/" + id, { method: "DELETE" });
+          state.wishlist = state.wishlist.filter(w => w.id != id);
+          paintWishlist();
+          toast("Removed from wishlist", "info");
+        } catch (err) { toast(err.message, "error"); }
+      }
+    }, { passive: true });
   });
 
   $$(".wl-remove").forEach(btn => {
@@ -2370,7 +2392,8 @@ function paintWishlist() {
         await api("/wishlist/" + id, { method: "DELETE" });
         state.wishlist = state.wishlist.filter(w => w.id != id);
         paintWishlist();
-        toast("Removed from wishlist");
+        haptic("medium");
+        toast("Removed from wishlist", "info");
       } catch (err) { toast(err.message, "error"); }
     });
   });
