@@ -408,7 +408,7 @@ function paintPortfolio() {
                     </div>
                   </div>
                 </div>
-                <button class="primary-btn" onclick="location.hash='#/add'">Browse catalog →</button>
+                <a href="#/add" class="primary-btn">Browse catalog →</a>
               </div>
             ` : `<h3>No sets match</h3><p>Clear the search or try a different filter.</p>`}
           </div>
@@ -633,7 +633,7 @@ function paintSetDetail(set, entry) {
       <div class="detail-hero">
         <div class="detail-hero-bg" style="background-image:url('${set.image_url}')"></div>
         <div class="detail-hero-overlay"></div>
-        <button class="detail-back" onclick="history.back()" aria-label="Back">
+        <button class="detail-back" id="detailBack" aria-label="Back">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
         </button>
         <img class="detail-img" src="${set.image_url}" alt="${set.name}" onerror="this.style.opacity=0.15">
@@ -700,6 +700,7 @@ function paintSetDetail(set, entry) {
   $$(".detail-share-btn").forEach(btn =>
     btn.addEventListener("click", () => shareSet(set, entry))
   );
+  $("#detailBack")?.addEventListener("click", () => history.back());
 }
 
 function renderInfoTab(set, entry) {
@@ -2048,6 +2049,8 @@ function closeScan() {
 document.addEventListener("DOMContentLoaded", () => {
   const cap = $("#scanCapture");
   if (cap) cap.addEventListener("click", capturePhoto);
+  const scanClose = $("#scanCloseBtn");
+  if (scanClose) scanClose.addEventListener("click", () => closeScan());
   // Haptic feedback + scroll-to-top when tapping active nav tab
   $$("#nav .nav-tab").forEach(t => {
     t.addEventListener("click", () => {
