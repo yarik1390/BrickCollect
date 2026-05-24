@@ -2256,65 +2256,96 @@ img:not([src]) {
 /* ── Dark mode ──────────────────────────────────────────────── */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg:           #1A1A1F;
-    --bg-deep:      #111115;
-    --surface:      #232329;
-    --surface-2:    #2C2C34;
-    --surface-3:    #35353F;
-    --line:         rgba(255,255,255,0.10);
-    --line-soft:    rgba(255,255,255,0.08);
-    --line-strong:  rgba(255,255,255,0.18);
+    --bg:           #16161C;
+    --bg-deep:      #0E0E12;
+    --surface:      #222228;
+    --surface-2:    #2A2A34;
+    --surface-3:    #33333F;
+    --line:         rgba(255,255,255,0.14);
+    --line-soft:    rgba(255,255,255,0.10);
+    --line-strong:  rgba(255,255,255,0.22);
 
-    --ink:          #F2EDE3;
-    --ink-soft:     #D8D0C4;
-    --ink-mute:     #9490A0;
-    --ink-faint:    #5E5A6A;
+    --ink:          #EDE8DC;
+    --ink-soft:     #C8C0B4;
+    --ink-mute:     #8A8698;
+    --ink-faint:    #56525E;
 
-    --accent-pale:  rgba(255,215,0,0.08);
-    --up-pale:      rgba(47,109,67,0.15);
-    --up-soft:      rgba(47,109,67,0.20);
-    --down-soft:    rgba(165,50,36,0.20);
+    --lego-yellow:      #FFD700;
+    --lego-yellow-dark: #E5C000;
+    --accent:           #FFD700;
+    --accent-soft:      #FFE566;
+    --accent-bg:        rgba(255,215,0,0.14);
+    --accent-pale:      rgba(255,215,0,0.07);
 
-    --shadow-1: 2px 2px 0 rgba(0,0,0,0.4);
-    --shadow-2: 4px 4px 0 rgba(0,0,0,0.4);
-    --shadow-3: 5px 5px 0 rgba(0,0,0,0.35);
-    --shadow-4: 6px 6px 0 rgba(0,0,0,0.30);
+    --up:      #4A9E6A;
+    --up-soft: rgba(74,158,106,0.22);
+    --up-pale: rgba(74,158,106,0.12);
+    --down:    #C0503A;
+    --down-soft: rgba(192,80,58,0.22);
+
+    --shadow-1: 2px 2px 0 rgba(0,0,0,0.5);
+    --shadow-2: 4px 4px 0 rgba(0,0,0,0.5);
+    --shadow-3: 5px 5px 0 rgba(0,0,0,0.45);
+    --shadow-4: 6px 6px 0 rgba(0,0,0,0.40);
   }
 
-  body::before { opacity: 0.15; }
+  body::before { opacity: 0.10; }
 
-  .brand-name { color: var(--ink); }
-  .nav-tab    { color: var(--ink-mute); }
-  .nav-tab.active { color: var(--lego-red); }
-  .bottom-nav { background: var(--surface); border-top-color: var(--line); }
+  /* Nav */
+  .bottom-nav {
+    background: #1C1C24;
+    border-color: rgba(255,255,255,0.12);
+    box-shadow: 0 -1px 0 rgba(255,255,255,0.06), var(--shadow-4);
+  }
+  .nav-tab { color: var(--ink-mute); }
+  .nav-tab.active { background: var(--lego-yellow); color: #1C1C1E; border-color: rgba(0,0,0,0.25); }
+
+  /* Cards */
   .card       { background: var(--surface); border-color: var(--line-soft); }
-  .chip       { background: var(--surface-2); border-color: var(--line-soft); color: var(--ink-soft); }
-  .chip.active { background: var(--ink); color: var(--bg); }
-  .hero       { background: var(--surface); }
+  .hero       { background: var(--surface); border-color: var(--line); }
   .hero-label { color: var(--ink-mute); }
-  .detail-hero-bg { filter: brightness(0.55); }
-  .scan-overlay { background: rgba(0,0,0,0.96); }
+  .set-card   { background: var(--surface); border-color: var(--line-soft); }
+  .set-list-card { background: var(--surface); border-color: var(--line-soft); }
   .add-result { background: var(--surface); border-color: var(--line-soft); }
-  .condition-sel, .notes-ta { background: var(--surface-2); color: var(--ink); border-color: var(--line); }
+  .stat       { background: var(--surface-2); border-color: var(--line-soft); }
   .onboarding-card { background: var(--surface); border-color: var(--line-soft); }
   .onboarding-step { background: var(--surface-2); }
-  .sort-pill  { background: var(--surface-2); color: var(--ink); border-color: var(--line-soft); }
-  input, textarea, select { background: var(--surface-2); color: var(--ink); }
-  .me-header { background: var(--surface); border-color: var(--line-soft); }
-  .me-name { color: var(--ink); }
-  .me-handle { color: var(--ink-mute); }
-  .me-stat { background: var(--surface-2); }
-  .me-stat-label { color: var(--ink-mute); }
+  .perf-card  { background: var(--surface); border-color: var(--line-soft); }
   .me-links-card { background: var(--surface); border-color: var(--line-soft); }
+  .wishlist-card { background: var(--surface); border-color: var(--line-soft); }
+  .scan-result-card { background: var(--surface); border-color: var(--line-soft); }
+  .quick-actions-menu { background: var(--surface); border-color: var(--line-soft); }
+
+  /* Chips & filters */
+  .chip       { background: var(--surface-2); border-color: var(--line-soft); color: var(--ink-soft); }
+  .chip.active { background: var(--lego-yellow); color: #1C1C1E; border-color: var(--lego-yellow-dark); }
+  .sort-pill  { background: var(--surface-2); color: var(--ink); border-color: var(--line-soft); }
+
+  /* Forms */
+  input, textarea, select { background: var(--surface-2); color: var(--ink); border-color: var(--line); }
+  .condition-sel, .notes-ta { background: var(--surface-2); color: var(--ink); border-color: var(--line); }
+  .search-input { background: var(--surface-2); border-color: var(--line); color: var(--ink); }
+  .price-input { background: var(--surface-2); border-color: var(--line); }
+  .date-input  { background: var(--surface-2); border-color: var(--line); }
+
+  /* Me page */
+  .me-header { background: var(--surface); border-color: var(--line-soft); }
+  .me-name   { color: var(--ink); }
+  .me-handle { color: var(--ink-mute); }
+  .me-stat   { background: var(--surface-2); border-color: var(--line-soft); }
+  .me-stat-label { color: var(--ink-mute); }
   .me-link-row { border-color: var(--line-soft); }
   .me-link-row:hover { background: var(--surface-2); }
-  .wishlist-card { background: var(--surface); border-color: var(--line-soft); }
-  .wl-gap-badge { background: rgba(255,215,0,0.15); color: #FFD700; }
-  .wl-gap-badge.at-target { background: var(--up-pale); color: var(--up); }
+
+  /* Alerts & badges */
   .alert-row { border-color: var(--line-soft); }
-  .quick-actions-menu { background: var(--surface); border-color: var(--line-soft); }
-  .qa-item { border-color: var(--line-soft); }
-  .scan-result-card { background: var(--surface); border-color: var(--line-soft); }
+  .qa-item   { border-color: var(--line-soft); }
+  .wl-gap-badge { background: rgba(255,215,0,0.18); color: #FFD700; }
+  .wl-gap-badge.at-target { background: var(--up-pale); color: var(--up); }
+
+  /* Scanner */
+  .detail-hero-bg { filter: brightness(0.45); }
+  .scan-overlay   { background: rgba(0,0,0,0.96); }
 }
 
 /* ── Me page ──────────────────────────────────────────────── */

@@ -1340,15 +1340,16 @@ function applyCatalogFilters(sets) {
   let result = sets.slice();
   if (state.filter.catalogYear !== "all") {
     result = result.filter(s => {
-      const y = s.year || 0;
+      const y = s.year;
+      if (!y) return true; // unknown year: include in all filters
       if (state.filter.catalogYear === "2020s")   return y >= 2020;
       if (state.filter.catalogYear === "2010s")   return y >= 2010 && y < 2020;
-      if (state.filter.catalogYear === "pre2010") return y < 2010 && y > 0;
+      if (state.filter.catalogYear === "pre2010") return y < 2010;
       return true;
     });
   }
   if (state.filter.catalogRetired) {
-    result = result.filter(s => s.is_retired);
+    result = result.filter(s => s.retired);
   }
   const sort = state.filter.catalogSort;
   result.sort((a, b) => {
@@ -1357,7 +1358,7 @@ function applyCatalogFilters(sets) {
     if (sort === "year_desc")   return (b.year || 0) - (a.year || 0);
     if (sort === "year_asc")    return (a.year || 0) - (b.year || 0);
     if (sort === "name_asc")    return (a.name || "").localeCompare(b.name || "");
-    if (sort === "pieces_desc") return (b.num_parts || 0) - (a.num_parts || 0);
+    if (sort === "pieces_desc") return (b.pieces || 0) - (a.pieces || 0);
     return 0;
   });
   return result;
