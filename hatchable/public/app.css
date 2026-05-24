@@ -16,26 +16,26 @@
   --surface:      #FFFFFF;
   --surface-2:    #F2EDE3;
   --surface-3:    #EAE3D4;
-  --line:         #1C1C1E;        /* thick LEGO-brick outline */
-  --line-soft:    #D5CDB8;        /* subtle divider */
+  --line:         #E5DDCB;        /* subtle warm divider */
+  --line-soft:    #D5CDB8;        /* hairline */
 
   /* ───── ink ───── */
-  --ink:          #1C1C1E;
-  --ink-soft:     #2D2F36;
+  --ink:          #0B1220;
+  --ink-soft:     #1F2A3D;
   --ink-mute:     #5E6878;
   --ink-faint:    #97A0B0;
 
-  /* ───── LEGO accent palette ───── */
-  --lego-yellow:  #FFD700;
-  --lego-yellow-dark: #E5C000;
-  --lego-red:     #DA291C;
-  --lego-red-dark:#B8220F;
+  /* ───── accent palette (antique saffron) ───── */
+  --lego-yellow:      #B5762E;
+  --lego-yellow-dark: #9A601E;
+  --lego-red:         #1F2A3D;
+  --lego-red-dark:    #0B1220;
 
-  /* ───── accent (LEGO yellow replaces saffron) ───── */
-  --accent:       #FFD700;
-  --accent-soft:  #FFE566;
-  --accent-bg:    #FFF4A8;
-  --accent-pale:  #FFFBE8;
+  /* ───── accent ───── */
+  --accent:       #B5762E;
+  --accent-soft:  #E8C485;
+  --accent-bg:    #F6E5C7;
+  --accent-pale:  #FCF2DD;
 
   /* ───── signal ───── */
   --up:           #2F6D43;
@@ -56,11 +56,11 @@
   --r-full: 999px;
   --r-card: 16px;
 
-  /* ───── LEGO-style hard-offset shadows ───── */
-  --shadow-1: 2px 2px 0 rgba(28,28,30,0.18);
-  --shadow-2: 4px 4px 0 rgba(28,28,30,0.18);
-  --shadow-3: 5px 5px 0 rgba(28,28,30,0.16);
-  --shadow-4: 6px 6px 0 rgba(28,28,30,0.14);
+  /* ───── soft diffused shadows ───── */
+  --shadow-1: 0 1px 2px rgba(11,18,32,.04);
+  --shadow-2: 0 1px 3px rgba(11,18,32,.05), 0 10px 24px -14px rgba(11,18,32,.18);
+  --shadow-3: 0 2px 6px rgba(11,18,32,.06), 0 30px 60px -28px rgba(11,18,32,.22);
+  --shadow-4: 0 2px 8px rgba(11,18,32,.08), 0 40px 90px -32px rgba(11,18,32,.28);
 
   /* ───── motion ───── */
   --ease:    cubic-bezier(.2,.7,.2,1);
@@ -109,14 +109,10 @@ html, body {
   -webkit-user-select: none;
 }
 
-/* Stud dot-grid background — the LEGO table texture */
-body::before {
-  content: "";
-  position: fixed; inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background-image: radial-gradient(circle, rgba(28,28,30,0.09) 1.5px, transparent 1.5px);
-  background-size: 22px 22px;
+body {
+  background-image:
+    radial-gradient(1100px 580px at -10% -8%, rgba(181,118,46,0.06), transparent 60%),
+    radial-gradient(800px 700px at 110% 102%, rgba(11,18,32,0.035), transparent 60%);
 }
 
 button { font: inherit; color: inherit; cursor: pointer; background: none; border: 0; padding: 0; }
