@@ -2799,7 +2799,3 @@ img:not([src]) {
   margin-bottom: 6px;
 }
 .detail-title-row .detail-title {
-  font-family: var(--serif); font-weight: 700; font-size: 24px;
-  line-height: 1.18; color: var(--ink); margin: 0;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
