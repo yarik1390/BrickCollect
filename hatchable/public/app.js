@@ -5,6 +5,18 @@
 
 const API = (window.__HATCHABLE__ && window.__HATCHABLE__.api) || "/api";
 
+// Global image error handler (CSP-safe replacement for inline onerror attributes)
+document.addEventListener("error", function(e) {
+  if (e.target.tagName !== "IMG") return;
+  const img = e.target;
+  if (img.nextElementSibling?.classList.contains("fig-img-placeholder")) {
+    img.style.display = "none";
+    img.nextElementSibling.style.display = "flex";
+  } else {
+    img.style.opacity = "0.12";
+  }
+}, true);
+
 const state = {
   portfolio: null,
   catalog: null,
@@ -474,7 +486,7 @@ function setListCardHTML(item) {
   return `
     <div class="set-list-card" data-set="${encodeURIComponent(item.set_num)}">
       <div class="set-img" style="position:relative">
-        <img src="${item.image_url}" alt="${item.name}" loading="lazy" onerror="this.style.opacity=0.12">
+        <img src="${item.image_url}" alt="${item.name}" loading="lazy">
         ${isNew ? `<span class="new-badge">NEW</span>` : ""}
       </div>
       <div class="set-body">
@@ -636,7 +648,7 @@ function paintSetDetail(set, entry) {
         <button class="detail-back" id="detailBack" aria-label="Back">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
         </button>
-        <img class="detail-img" src="${set.image_url}" alt="${set.name}" onerror="this.style.opacity=0.15">
+        <img class="detail-img" src="${set.image_url}" alt="${set.name}">
       </div>
       <div class="detail-title-row">
         <div class="detail-title-inner">
@@ -1048,7 +1060,7 @@ async function renderAdd() {
   }
 
   // wire year filter chips
-  $$("#themeChips [data-year], .filter-row [data-year]").forEach(btn => {
+  $$(".filter-row [data-year]").forEach(btn => {
     btn.addEventListener("click", () => {
       state.filter.catalogYear = btn.dataset.year;
       state.catalogPage = 1;
@@ -1169,7 +1181,7 @@ function paintCatalogResults() {
     return `
       <div class="add-result ${owned ? "owned" : ""}" data-set="${encodeURIComponent(s.set_num)}">
         <div class="add-result-img">
-          <img src="${s.image_url}" alt="${s.name}" loading="lazy" onerror="this.style.opacity=0.12">
+          <img src="${s.image_url}" alt="${s.name}" loading="lazy">
           ${owned ? `<span class="owned-badge">${I.check}</span>` : ""}
         </div>
         <div class="add-result-body">
@@ -1373,7 +1385,7 @@ async function renderBlind() {
         <div class="fig-grid" id="figGrid">
           ${figs.map(fig => `
             <div class="fig-card fig-${fig.rarity || "common"}" data-fig="${fig.fig_num}">
-              <img src="${fig.image_url}" alt="${fig.name}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span class="fig-img-placeholder">🧱</span>
+              <img src="${fig.image_url}" alt="${fig.name}" loading="lazy"><span class="fig-img-placeholder">🧱</span>
               <div class="fig-name">${fig.name}</div>
               <div class="fig-series">${fig.series || ""}</div>
               <div class="fig-val">${fig.value ? fmtMoney(fig.value) : ""}</div>
@@ -1394,7 +1406,7 @@ async function renderBlind() {
         const g = $("#figGrid");
         if (g) g.innerHTML = (d.minifigs || []).map(fig => `
           <div class="fig-card fig-${fig.rarity || "common"}" data-fig="${fig.fig_num}">
-            <img src="${fig.image_url}" alt="${fig.name}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span class="fig-img-placeholder">🧱</span>
+            <img src="${fig.image_url}" alt="${fig.name}" loading="lazy"><span class="fig-img-placeholder">🧱</span>
             <div class="fig-name">${fig.name}</div>
             <div class="fig-series">${fig.series || ""}</div>
             <div class="fig-val">${fig.value ? fmtMoney(fig.value) : ""}</div>
@@ -1543,7 +1555,7 @@ function paintMe() {
           ${performers.map((item, i) => `
             <a class="perf-row" href="#/set/${encodeURIComponent(item.set_num)}">
               <span class="perf-rank">#${i+1}</span>
-              <img class="perf-img" src="${item.image_url}" alt="${item.name}" onerror="this.style.opacity=0.1">
+              <img class="perf-img" src="${item.image_url}" alt="${item.name}">
               <div class="perf-info">
                 <div class="perf-name">${item.name}</div>
                 <div class="perf-num">${item.theme || "—"}</div>
@@ -1686,7 +1698,7 @@ function paintWishlist() {
               : "";
             return `
               <div class="wishlist-card" data-id="${w.id}">
-                <img class="wl-img" src="${w.image_url}" alt="${w.name}" onerror="this.style.opacity=0.15">
+                <img class="wl-img" src="${w.image_url}" alt="${w.name}">
                 <div class="wl-body">
                   <div class="wl-name">${w.name}</div>
                   <div class="wl-meta">#${w.set_num}${w.theme ? " · " + w.theme : ""}</div>
@@ -1905,7 +1917,7 @@ function showScanResultCard(set) {
   card.className = "scan-result-card";
   card.innerHTML = `
     <div class="src-img">
-      <img src="${set.image_url || ""}" alt="${set.name}" onerror="this.style.opacity=0.2">
+      <img src="${set.image_url || ""}" alt="${set.name}">
     </div>
     <div class="src-body">
       <div class="src-name">${set.name}</div>
