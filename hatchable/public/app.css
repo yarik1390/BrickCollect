@@ -32,7 +32,7 @@
 
   /* ───── accent ───── */
   --accent:       #B5762E;
-  --accent-dark:  var(--accent-dark);
+  --accent-dark:  #6F4A1B;
   --accent-soft:  #E8C485;
   --accent-bg:    #F6E5C7;
   --accent-pale:  #FCF2DD;
