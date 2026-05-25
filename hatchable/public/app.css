@@ -1,11 +1,10 @@
 /* ============================================================
-   BRICKVAULT — LEGO-inspired design system
+   BRICKVAULT — collector's wealth-manager design system
    ------------------------------------------------------------
-   Aesthetic: collector's wealth-manager with LEGO character.
-   - Warm palette retained; LEGO yellow (#FFD700) replaces saffron.
-   - LEGO red (#DA291C) for primary CTAs.
-   - Hard-offset drop shadows on interactive cards (toy feel).
-   - Stud dot-grid background, brick brand mark.
+   Aesthetic: editorial restraint × collector's premium feel.
+   - Warm antique saffron accent (#B5762E).
+   - Soft diffused shadows, generous radius.
+   - Atmospheric corner-glow background.
    - Fraunces serif · Geist sans · IBM Plex Mono
    ============================================================ */
 
@@ -2375,12 +2374,14 @@ img:not([src]) {
     --ink-mute:     #8A8698;
     --ink-faint:    #56525E;
 
-    --lego-yellow:      #FFD700;
-    --lego-yellow-dark: #E5C000;
-    --accent:           #FFD700;
-    --accent-soft:      #FFE566;
-    --accent-bg:        rgba(255,215,0,0.14);
-    --accent-pale:      rgba(255,215,0,0.07);
+    --lego-yellow:      #C8874A;
+    --lego-yellow-dark: #A86E33;
+    --lego-red:         #C8C0B4;
+    --lego-red-dark:    #EDE8DC;
+    --accent:           #C8874A;
+    --accent-soft:      #D9A96E;
+    --accent-bg:        rgba(181,118,46,0.18);
+    --accent-pale:      rgba(181,118,46,0.09);
 
     --up:      #4A9E6A;
     --up-soft: rgba(74,158,106,0.22);
@@ -2388,13 +2389,11 @@ img:not([src]) {
     --down:    #C0503A;
     --down-soft: rgba(192,80,58,0.22);
 
-    --shadow-1: 2px 2px 0 rgba(0,0,0,0.5);
-    --shadow-2: 4px 4px 0 rgba(0,0,0,0.5);
-    --shadow-3: 5px 5px 0 rgba(0,0,0,0.45);
-    --shadow-4: 6px 6px 0 rgba(0,0,0,0.40);
+    --shadow-1: 0 1px 2px rgba(0,0,0,0.30);
+    --shadow-2: 0 1px 3px rgba(0,0,0,0.32), 0 10px 24px -14px rgba(0,0,0,0.50);
+    --shadow-3: 0 2px 6px rgba(0,0,0,0.35), 0 30px 60px -28px rgba(0,0,0,0.55);
+    --shadow-4: 0 2px 8px rgba(0,0,0,0.38), 0 40px 90px -32px rgba(0,0,0,0.60);
   }
-
-  body::before { opacity: 0.10; }
 
   /* Nav */
   .bottom-nav {
@@ -2403,7 +2402,7 @@ img:not([src]) {
     box-shadow: 0 -1px 0 rgba(255,255,255,0.06), var(--shadow-4);
   }
   .nav-tab { color: var(--ink-mute); }
-  .nav-tab.active { background: var(--lego-yellow); color: #1C1C1E; border-color: rgba(0,0,0,0.25); }
+  .nav-tab.active { background: var(--lego-yellow); color: #fff; border-color: rgba(0,0,0,0.25); }
 
   /* Cards */
   .card       { background: var(--surface); border-color: var(--line-soft); }
@@ -2423,7 +2422,7 @@ img:not([src]) {
 
   /* Chips & filters */
   .chip       { background: var(--surface-2); border-color: var(--line-soft); color: var(--ink-soft); }
-  .chip.active { background: var(--lego-yellow); color: #1C1C1E; border-color: var(--lego-yellow-dark); }
+  .chip.active { background: var(--lego-yellow); color: #fff; border-color: var(--lego-yellow-dark); }
   .sort-pill  { background: var(--surface-2); color: var(--ink); border-color: var(--line-soft); }
 
   /* Forms */
@@ -2445,7 +2444,7 @@ img:not([src]) {
   /* Alerts & badges */
   .alert-row { border-color: var(--line-soft); }
   .qa-item   { border-color: var(--line-soft); }
-  .wl-gap-badge { background: rgba(255,215,0,0.18); color: #FFD700; }
+  .wl-gap-badge { background: rgba(181,118,46,0.18); color: var(--accent); }
   .wl-gap-badge.at-target { background: var(--up-pale); color: var(--up); }
 
   /* Scanner */
