@@ -80,7 +80,7 @@
   </a>
   <a href="#/pile" class="nav-tab scan-tab" data-route="/pile">
     <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8.5l9-5 9 5-9 5-9-5zM3 13l9 5 9-5M3 17l9 5 9-5"/></svg>
-    Scan
+    <span class="nav-label">Scan</span>
   </a>
   <a href="#/blind" class="nav-tab" data-route="/blind">
     <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M6 7h12l-1 13a2 2 0 01-2 2H9a2 2 0 01-2-2L6 7zM9 7V5a3 3 0 016 0v2"/></svg>
@@ -100,6 +100,10 @@
 
 <!-- Toast -->
 <div id="toast" class="toast"></div>
+
+<!-- Quick actions sheet -->
+<div id="sheetBackdrop" class="sheet-backdrop"></div>
+<div id="sheet" class="sheet"></div>
 
 <!-- Camera scan overlay (real getUserMedia) -->
 <div id="scanOverlay" class="scan-overlay">
