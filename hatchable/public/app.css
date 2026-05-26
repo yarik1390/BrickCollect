@@ -1,10 +1,10 @@
 /* ============================================================
-   BRICKVAULT — collector's wealth-manager design system
+   BRICKVAULT — LEGO-toy collector design system
    ------------------------------------------------------------
-   Aesthetic: editorial restraint × collector's premium feel.
-   - Warm antique saffron accent (#B5762E).
-   - Soft diffused shadows, generous radius.
-   - Atmospheric corner-glow background.
+   - Cream paper bg, hard black 2px borders
+   - Bright LEGO yellow accent (#FFD700) + LEGO red CTAs (#DA291C)
+   - Hard-offset shadows (no blur) for toy-press feel
+   - mix-blend-mode multiply on product images
    - Fraunces serif · Geist sans · IBM Plex Mono
    ============================================================ */
 
@@ -15,34 +15,39 @@
   --surface:      #FFFFFF;
   --surface-2:    #F2EDE3;
   --surface-3:    #EAE3D4;
-  --line:         #E5DDCB;        /* subtle warm divider */
-  --line-soft:    #D5CDB8;        /* hairline */
+  --line:         #1C1C1E;        /* hard black border */
+  --line-soft:    #D5CDB8;        /* soft cream divider */
 
   /* ───── ink ───── */
-  --ink:          #0B1220;
-  --ink-soft:     #1F2A3D;
+  --ink:          #1C1C1E;
+  --ink-soft:     #2D2F36;
   --ink-mute:     #5E6878;
   --ink-faint:    #97A0B0;
 
-  /* ───── accent palette (antique saffron) ───── */
-  --lego-yellow:      #B5762E;
-  --lego-yellow-dark: #9A601E;
-  --lego-red:         #1F2A3D;
-  --lego-red-dark:    #0B1220;
+  /* ───── brand palette (LEGO) ───── */
+  --lego-yellow:      #FFD700;
+  --lego-yellow-dark: #E5C000;
+  --lego-red:         #DA291C;
+  --lego-red-dark:    #B8220F;
+  --bv-yellow:        #FFD700;
+  --bv-yellow-dark:   #E5C000;
+  --bv-red:           #DA291C;
+  --bv-red-dark:      #B8220F;
 
-  /* ───── accent ───── */
-  --accent:       #B5762E;
+  /* ───── accent (yellow-warm) ───── */
+  --accent:       #FFD700;
   --accent-dark:  #6F4A1B;
   --accent-soft:  #E8C485;
-  --accent-bg:    #F6E5C7;
-  --accent-pale:  #FCF2DD;
+  --accent-bg:    #FFF4C2;
+  --accent-pale:  #FFFBE5;
 
   /* ───── signal ───── */
-  --up:           #2F6D43;
-  --up-soft:      #DCE9DA;
-  --up-pale:      #EFF5EE;
-  --down:         #A53224;
-  --down-soft:    #F1D6CE;
+  --up:           #1A7F4B;
+  --up-soft:      #D4EDDA;
+  --up-pale:      #EAF7EE;
+  --down:         #C0392B;
+  --down-soft:    #F8D7DA;
+  --down-pale:    #FBEEEC;
 
   /* ───── type ───── */
   --serif: "Fraunces", "Iowan Old Style", Georgia, serif;
@@ -50,26 +55,26 @@
   --mono:  "IBM Plex Mono", ui-monospace, "JetBrains Mono", Menlo, monospace;
 
   /* ───── shape ───── */
-  --r-1:  10px;
-  --r-2:  16px;
-  --r-3:  24px;
-  --r-full: 999px;
+  --r-1:  6px;
+  --r-2:  12px;
+  --r-3:  16px;
+  --r-full: 9999px;
   --r-card: 16px;
 
-  /* ───── soft diffused shadows ───── */
-  --shadow-1: 0 1px 2px rgba(11,18,32,.04);
-  --shadow-2: 0 1px 3px rgba(11,18,32,.05), 0 10px 24px -14px rgba(11,18,32,.18);
-  --shadow-3: 0 2px 6px rgba(11,18,32,.06), 0 30px 60px -28px rgba(11,18,32,.22);
-  --shadow-4: 0 2px 8px rgba(11,18,32,.08), 0 40px 90px -32px rgba(11,18,32,.28);
+  /* ───── hard-offset shadows (toy feel) ───── */
+  --shadow-1: 2px 2px 0 var(--line);
+  --shadow-2: 3px 3px 0 var(--line);
+  --shadow-3: 4px 4px 0 var(--line);
+  --shadow-4: 5px 5px 0 var(--line);
 
   /* ───── motion ───── */
-  --ease:    cubic-bezier(.2,.7,.2,1);
+  --ease:    cubic-bezier(0.4, 0, 0.2, 1);
   --ease-in: cubic-bezier(.4,0,1,1);
-  --dur-fast:  140ms;
-  --dur:       260ms;
+  --dur-fast:  120ms;
+  --dur:       220ms;
   --dur-slow:  400ms;
 
-  --nav-h: 76px;
+  --nav-h: 64px;
 
   /* font aliases (used in Round 2 components) */
   --f-serif: var(--serif);
@@ -88,7 +93,7 @@
 *:focus-visible { outline: 2.5px solid var(--lego-yellow); outline-offset: 2px; border-radius: 4px; }
 input:focus-visible, select:focus-visible, textarea:focus-visible {
   border-color: var(--lego-yellow) !important; outline: none;
-  box-shadow: 0 0 0 3px rgba(181,118,46,0.22) !important;
+  box-shadow: 0 0 0 3px rgba(255,215,0,0.35) !important;
 }
 
 html, body {
@@ -232,28 +237,24 @@ button:active, a:active, [role="button"]:active { opacity: 0.82; }
   gap: 9px;
 }
 
-/* LEGO 1×2 brick mark — red with two studs */
+/* LEGO yellow brick mark — square with two stud holes */
 .brand-mark {
-  width: 30px; height: 18px;
-  background: var(--lego-red);
-  border-radius: 4px;
+  width: 30px; height: 30px; border-radius: 7px;
+  background: var(--bv-yellow);
+  border: 2px solid var(--line);
   position: relative;
   display: inline-block;
   flex-shrink: 0;
-  border: 1.5px solid rgba(0,0,0,0.3);
-  box-shadow: 0 2px 0 rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.12);
+  box-shadow: 2px 2px 0 var(--line);
 }
-/* Two studs via ::before (second via box-shadow trick) */
-.brand-mark::before {
-  content: "";
-  position: absolute;
-  top: 3px; left: 4px;
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.32);
-  box-shadow: 13px 0 0 rgba(255,255,255,0.32);
+.brand-mark::before, .brand-mark::after {
+  content: ""; position: absolute; width: 7px; height: 7px;
+  border-radius: 50%; background: var(--line);
+  top: 5px;
+  box-shadow: none;
 }
-.brand-mark::after { display: none; }
+.brand-mark::before { left: 5px; }
+.brand-mark::after  { right: 5px; display: block; }
 
 .brand-name {
   font-family: var(--serif);
@@ -287,7 +288,7 @@ button:active, a:active, [role="button"]:active { opacity: 0.82; }
   position: relative;
   background: var(--surface);
   border-radius: var(--r-3);
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
   padding: 18px 20px 14px;
   box-shadow: var(--shadow-3);
   overflow: hidden;
@@ -487,7 +488,7 @@ button:active, a:active, [role="button"]:active { opacity: 0.82; }
 .set-card {
   background: var(--surface);
   border-radius: var(--r-2);
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
   overflow: hidden;
   position: relative;
   cursor: pointer;
@@ -587,7 +588,7 @@ button:active, a:active, [role="button"]:active { opacity: 0.82; }
 .empty {
   background: var(--surface);
   border-radius: var(--r-3);
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
   padding: 44px 24px 32px;
   text-align: center;
   margin-top: 8px;
@@ -624,7 +625,7 @@ button:active, a:active, [role="button"]:active { opacity: 0.82; }
   color: #fff;
   font-size: 13.5px;
   font-weight: 700;
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
   box-shadow: var(--shadow-2);
 }
 .empty .add-btn:hover { background: var(--lego-red-dark); transform: translate(-2px, -2px); box-shadow: var(--shadow-3); }
@@ -668,7 +669,7 @@ button:active, a:active, [role="button"]:active { opacity: 0.82; }
 .card {
   background: var(--surface);
   border-radius: var(--r-2);
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
   padding: 18px;
   box-shadow: var(--shadow-2);
   margin-bottom: 12px;
@@ -870,7 +871,7 @@ button:active, a:active, [role="button"]:active { opacity: 0.82; }
   justify-content: center;
   gap: 8px;
   margin-top: 6px;
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
   box-shadow: var(--shadow-2);
 }
 .primary-btn:hover { background: var(--lego-yellow-dark); transform: translate(-2px, -2px); box-shadow: var(--shadow-3); }
@@ -883,7 +884,7 @@ button:active, a:active, [role="button"]:active { opacity: 0.82; }
   margin-top: 6px;
   border-radius: var(--r-2);
   background: var(--down-soft);
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
   color: var(--down);
   font-weight: 600;
   font-size: 13.5px;
@@ -996,7 +997,7 @@ button:active, a:active, [role="button"]:active { opacity: 0.82; }
 .list-card {
   background: var(--surface);
   border-radius: var(--r-2);
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
   overflow: hidden;
   box-shadow: var(--shadow-2);
 }
@@ -1045,7 +1046,7 @@ button:active, a:active, [role="button"]:active { opacity: 0.82; }
   flex-direction: column;
   background: var(--surface);
   border-radius: var(--r-2);
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
   overflow: hidden;
   cursor: pointer;
   box-shadow: var(--shadow-2);
@@ -1072,7 +1073,7 @@ button:active, a:active, [role="button"]:active { opacity: 0.82; }
 .owned-badge {
   position: absolute; top: 8px; right: 8px;
   width: 26px; height: 26px; border-radius: 50%;
-  background: var(--lego-red); border: 1px solid var(--line);
+  background: var(--lego-red); border: 2px solid var(--line);
   display: flex; align-items: center; justify-content: center;
   color: #fff; box-shadow: var(--shadow-1);
   pointer-events: none;
@@ -1105,7 +1106,7 @@ button:active, a:active, [role="button"]:active { opacity: 0.82; }
 }
 .add-result-btn {
   width: 30px; height: 30px; border-radius: var(--r-full);
-  background: var(--lego-yellow); border: 1px solid var(--line);
+  background: var(--lego-yellow); border: 2px solid var(--line);
   display: flex; align-items: center; justify-content: center;
   color: var(--ink); flex-shrink: 0; box-shadow: var(--shadow-1);
 }
@@ -1215,7 +1216,7 @@ button:active, a:active, [role="button"]:active { opacity: 0.82; }
 .fig-card {
   background: var(--surface);
   border-radius: var(--r-2);
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
   padding: 12px;
   text-align: center;
   position: relative;
@@ -1543,7 +1544,7 @@ button:active, a:active, [role="button"]:active { opacity: 0.82; }
   margin: auto 22px;
   background: rgba(255,255,255,0.96);
   border-radius: var(--r-3);
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
   padding: 24px;
   text-align: center;
   color: var(--ink);
@@ -1652,7 +1653,7 @@ button:active, a:active, [role="button"]:active { opacity: 0.82; }
 }
 .page-btn {
   width: 36px; height: 36px; border-radius: var(--r-full);
-  background: var(--surface); border: 1px solid var(--line);
+  background: var(--surface); border: 2px solid var(--line);
   color: var(--ink-soft); font-size: 20px; line-height: 1;
   display: flex; align-items: center; justify-content: center;
   box-shadow: var(--shadow-1);
@@ -1772,7 +1773,7 @@ button:active, a:active, [role="button"]:active { opacity: 0.82; }
   padding: 13px 18px; border-radius: var(--r-full);
   background: var(--lego-red); color: #fff;
   font-size: 13px; font-weight: 700;
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
   box-shadow: var(--shadow-3);
 }
 .scan-pill:hover { background: var(--lego-red-dark); transform: translate(-2px,-2px); box-shadow: var(--shadow-4); }
@@ -1802,7 +1803,7 @@ button:active, a:active, [role="button"]:active { opacity: 0.82; }
   left: 50%; transform: translateX(-50%) translateY(20px);
   width: calc(100% - 32px); max-width: 428px;
   background: var(--surface); border-radius: var(--r-2);
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
   padding: 12px 12px 12px 16px;
   display: flex; align-items: center; gap: 10px;
   box-shadow: var(--shadow-4); z-index: 300;
@@ -1815,7 +1816,7 @@ button:active, a:active, [role="button"]:active { opacity: 0.82; }
 .ib-install {
   flex-shrink: 0; padding: 8px 14px; border-radius: var(--r-full);
   background: var(--lego-red); color: #fff; font-size: 13px; font-weight: 700; white-space: nowrap;
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
 }
 .ib-install:hover { background: var(--lego-red-dark); }
 .ib-dismiss {
@@ -1859,7 +1860,7 @@ button:active, a:active, [role="button"]:active { opacity: 0.82; }
   left: 50%;
   transform: translateX(-50%) translateY(-60px);
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
   border-radius: var(--r-full);
   padding: 9px 18px;
   font-family: var(--mono);
@@ -2005,7 +2006,7 @@ button:active, a:active, [role="button"]:active { opacity: 0.82; }
   width: 100%;
   padding: 11px 14px;
   border-radius: var(--r-1);
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
   background: var(--surface-2);
   font-size: 16px;
   font-family: var(--mono);
@@ -2366,35 +2367,42 @@ img:not([src]) {
     --surface:      #222228;
     --surface-2:    #2A2A34;
     --surface-3:    #33333F;
-    --line:         rgba(255,255,255,0.14);
-    --line-soft:    rgba(255,255,255,0.10);
-    --line-strong:  rgba(255,255,255,0.22);
+    --line:         #EDE8DC;        /* light line for dark mode (still 2px visible) */
+    --line-soft:    rgba(255,255,255,0.14);
+    --line-strong:  rgba(255,255,255,0.30);
 
     --ink:          #EDE8DC;
     --ink-soft:     #C8C0B4;
     --ink-mute:     #8A8698;
     --ink-faint:    #56525E;
 
-    --lego-yellow:      #C8874A;
-    --lego-yellow-dark: #A86E33;
-    --lego-red:         #B5762E;
-    --lego-red-dark:    #9A601E;
-    --accent-dark:      #C8A06E;
-    --accent:           #C8874A;
-    --accent-soft:      #D9A96E;
-    --accent-bg:        rgba(181,118,46,0.18);
-    --accent-pale:      rgba(181,118,46,0.09);
+    /* Brand colors stay LEGO yellow/red even in dark mode */
+    --lego-yellow:      #FFD700;
+    --lego-yellow-dark: #E5C000;
+    --lego-red:         #DA291C;
+    --lego-red-dark:    #B8220F;
+    --bv-yellow:        #FFD700;
+    --bv-yellow-dark:   #E5C000;
+    --bv-red:           #DA291C;
+    --bv-red-dark:      #B8220F;
+
+    --accent:           #FFD700;
+    --accent-dark:      #E5C000;
+    --accent-soft:      #FFE066;
+    --accent-bg:        rgba(255,215,0,0.18);
+    --accent-pale:      rgba(255,215,0,0.09);
 
     --up:      #4A9E6A;
     --up-soft: rgba(74,158,106,0.22);
     --up-pale: rgba(74,158,106,0.12);
-    --down:    #C0503A;
-    --down-soft: rgba(192,80,58,0.22);
+    --down:    #E14A3C;
+    --down-soft: rgba(225,74,60,0.22);
 
-    --shadow-1: 0 1px 2px rgba(0,0,0,0.30);
-    --shadow-2: 0 1px 3px rgba(0,0,0,0.32), 0 10px 24px -14px rgba(0,0,0,0.50);
-    --shadow-3: 0 2px 6px rgba(0,0,0,0.35), 0 30px 60px -28px rgba(0,0,0,0.55);
-    --shadow-4: 0 2px 8px rgba(0,0,0,0.38), 0 40px 90px -32px rgba(0,0,0,0.60);
+    /* Dark-mode hard-offset shadows use the light line color */
+    --shadow-1: 2px 2px 0 rgba(237,232,220,0.55);
+    --shadow-2: 3px 3px 0 rgba(237,232,220,0.55);
+    --shadow-3: 4px 4px 0 rgba(237,232,220,0.55);
+    --shadow-4: 5px 5px 0 rgba(237,232,220,0.55);
   }
 
   /* Nav */
@@ -2454,7 +2462,7 @@ img:not([src]) {
   .scan-overlay   { background: rgba(0,0,0,0.96); }
 
   /* Images: disable multiply blend in dark mode */
-  .set-img-wrap img, .add-result-img img { mix-blend-mode: normal; }
+  img { mix-blend-mode: normal !important; }
 }
 
 /* ── Me page ──────────────────────────────────────────────── */
@@ -2475,7 +2483,7 @@ img:not([src]) {
   display: flex; align-items: center; justify-content: center;
   font-family: var(--f-serif); font-size: 24px; color: #fff;
   flex-shrink: 0;
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
   box-shadow: var(--shadow-2);
 }
 .me-info { flex: 1; min-width: 0; }
@@ -2735,7 +2743,7 @@ img:not([src]) {
 }
 .spinner {
   width: 18px; height: 18px;
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
   border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
@@ -2795,4 +2803,108 @@ img:not([src]) {
   letter-spacing: 0.06em; text-transform: uppercase;
   margin-bottom: 6px;
 }
-.detail-title-row .detail-title {
+.detail-title-row .detail-title {  font-family: var(--serif); font-size: 26px; font-weight: 500;
+  letter-spacing: -0.02em; line-height: 1.1;
+}
+
+/* ============================================================
+   Claude Design — LEGO toy additions (v43)
+   ============================================================ */
+
+/* Brick-tile placeholder (used when image_url missing) */
+.brick-tile {
+  border-radius: 10px;
+  border: 2px solid var(--line);
+  position: relative;
+  background-color: oklch(0.72 0.13 var(--h, 30));
+}
+.brick-tile::before, .brick-tile::after {
+  content: ""; position: absolute; width: 18%; aspect-ratio: 1/1;
+  border-radius: 50%; border: 2px solid var(--line);
+  background-color: oklch(0.72 0.13 var(--h, 30));
+  top: -6%;
+}
+.brick-tile::before { left: 22%; }
+.brick-tile::after  { right: 22%; }
+
+/* Scan-orb nav-tab — bright red floating ball for /pile (camera) */
+.nav-tab.scan-tab {
+  position: relative;
+}
+.nav-tab.scan-tab svg { display: none; }
+.nav-tab.scan-tab::before {
+  content: "";
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--bv-red);
+  border: 2px solid var(--line);
+  box-shadow: 2px 2px 0 var(--line);
+  transform: translateY(-6px);
+  transition: transform var(--dur-fast) var(--ease);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' stroke='white' stroke-width='2.2' viewBox='0 0 24 24'%3E%3Crect x='3' y='6' width='18' height='13' rx='2'/%3E%3Cpath d='M8 6V4h8v2'/%3E%3Ccircle cx='12' cy='12.5' r='3.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+}
+.nav-tab.scan-tab:active::before { transform: translateY(-4px) scale(0.94); }
+.nav-tab.scan-tab { color: var(--ink); }
+.nav-tab.scan-tab.active { background: transparent !important; }
+.nav-tab.scan-tab.active::before { background-color: var(--bv-red); }
+
+/* Yellow indicator strip atop active nav tab */
+.nav-tab.active:not(.scan-tab)::before {
+  content: ""; position: absolute;
+  top: -7px; left: 30%; right: 30%; height: 3px;
+  background: var(--bv-yellow);
+  border-radius: 0 0 3px 3px;
+}
+
+/* CSS-only minifigure placeholder for blind-bag cards */
+.mini-figure {
+  width: 64px; height: 92px;
+  position: relative; margin: 8px auto;
+}
+.mini-figure .head {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: #FFE066; border: 2px solid var(--line);
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+}
+.mini-figure .body {
+  width: 38px; height: 36px;
+  background: var(--fig-color, #DA291C);
+  border: 2px solid var(--line);
+  border-radius: 6px 6px 2px 2px;
+  position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+}
+.mini-figure .legs {
+  width: 36px; height: 24px;
+  background: var(--fig-color2, #1C2E50);
+  border: 2px solid var(--line);
+  border-radius: 2px 2px 6px 6px;
+  position: absolute; top: 54px; left: 50%; transform: translateX(-50%);
+}
+
+/* Press states — toy-feel translate + shadow-shrink */
+.card:active, .set-card:active, .set-list-card:active, .list-card:active {
+  transform: translate(1.5px, 1.5px);
+  box-shadow: 1px 1px 0 var(--line);
+}
+.chip:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--line); }
+.primary-btn:active, .danger-btn:active, .scan-cta:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--line);
+}
+
+/* mix-blend-mode multiply on all set images (light mode) */
+.sl-img img, .set-img-wrap img, .add-result-img img, .perf-img, .wl-img, .src-img img, .detail-img {
+  mix-blend-mode: multiply;
+}
+
+/* Active chip — LEGO yellow */
+.chip.active { background: var(--lego-yellow); color: var(--ink); border-color: var(--line); }
+
+/* Hard offset on primary CTAs */
+.primary-btn {
+  box-shadow: var(--shadow-3);
+}
+.primary-btn.accent { background: var(--lego-red); color: #fff; }
+
